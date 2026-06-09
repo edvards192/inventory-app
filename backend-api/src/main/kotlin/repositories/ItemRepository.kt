@@ -1,0 +1,309 @@
+package com.example.repositories
+
+import com.example.database.ItemsTable
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import com.example.models.responses.ItemResponse
+import com.example.database.StorageTable
+import com.example.models.responses.StorageResponse
+import com.example.database.ItemImagesTable
+import com.example.models.responses.ItemImageResponse
+import org.jetbrains.exposed.v1.core.eq
+import com.example.models.requests.CreateItemRequest
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.update
+import com.example.services.FileStorageService
+import com.example.database.WarehousesTable
+import com.example.models.responses.WarehouseResponse
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.JoinType
+import com.example.models.requests.UpdateStorageRequest
+import com.example.models.requests.ReplaceStorageRequest
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.lowerCase
+
+
+class ItemRepository {
+
+    private val fileStorageService = FileStorageService()
+
+    fun testConnection(): Int {
+
+        return transaction {
+            ItemsTable.selectAll().count().toInt()
+        }
+    }
+
+    private fun getStorageByItemId(itemId: Int): List<StorageResponse> {
+        return StorageTable
+            .join(
+                WarehousesTable,
+                joinType = JoinType.INNER,
+                onColumn = StorageTable.warehouseId,
+                otherColumn = WarehousesTable.id
+            )
+            .selectAll()
+            .where {
+                StorageTable.itemId eq itemId
+            }
+            .map { row ->
+                StorageResponse(
+                    warehouseId = row[WarehousesTable.id],
+                    warehouseCode = row[WarehousesTable.warehouseCode],
+                    warehouseName = row[WarehousesTable.warehouseName],
+                    count = row[StorageTable.count] 
+                )
+            }
+    }
+
+    fun getAllItems(search: String = ""): List<ItemResponse> {
+        return transaction {
+            var query = ItemsTable.selectAll()
+
+            if (search.isNotBlank()) {
+                val searchTerm = "%$search%"
+                query = query.where {
+                    ItemsTable.title.lowerCase() like "%${search.lowercase()}%"
+                }
+            }
+
+            query.map { row ->
+
+                val id = row[ItemsTable.id]
+
+                ItemResponse(
+                    id = id,
+                    title = row[ItemsTable.title],
+                    ean = row[ItemsTable.ean],
+                    storageLocations = getStorageByItemId(id),
+                    images = getImagesByItemId(id)
+                )
+            }
+        }
+    }
+    private fun getImagesByItemId(itemId: Int): List<ItemImageResponse> {
+        return ItemImagesTable
+            .selectAll()
+            .where { ItemImagesTable.itemId eq itemId }
+            .orderBy(ItemImagesTable.sortOrder)
+            .map { row ->
+
+                ItemImageResponse(
+                    id = row[ItemImagesTable.id],
+                    url = row[ItemImagesTable.url],
+                    sortOrder = row[ItemImagesTable.sortOrder]
+                )
+            }
+    }
+
+    fun getItemById(id: Int): ItemResponse? {
+        return transaction {
+
+            ItemsTable
+                .selectAll()
+                .where { ItemsTable.id eq id }
+                .singleOrNull()
+                ?.let { row ->
+
+                    ItemResponse(
+                        id = row[ItemsTable.id],
+                        title = row[ItemsTable.title],
+                        ean = row[ItemsTable.ean],
+                        storageLocations = getStorageByItemId(id),
+                        images = getImagesByItemId(id)
+                    )
+                }
+        }
+    }
+    fun getItemByEan(ean: String): ItemResponse? {
+        return transaction {
+            ItemsTable
+                .selectAll()
+                .where {
+                    ItemsTable.ean eq ean
+                }
+                .singleOrNull()
+                ?.let { row ->
+
+                    val id = row[ItemsTable.id]
+
+                    ItemResponse(
+                        id = id,
+                        title = row[ItemsTable.title],
+                        ean = row[ItemsTable.ean],
+                        storageLocations =
+                            getStorageByItemId(id),
+                        images =
+                            getImagesByItemId(id)
+                    )
+                }
+        }
+    }
+    fun createItem(request: CreateItemRequest): Int {
+        return transaction {
+
+            ItemsTable.insert { row ->
+
+                row[ItemsTable.title] = request.title
+                row[ItemsTable.ean] = request.ean
+            }[ItemsTable.id]
+        }
+    } 
+    fun updateItem(id: Int, request: CreateItemRequest): Boolean {
+
+        return transaction {
+
+            val updatedRows = ItemsTable.update({ ItemsTable.id eq id }) { row ->
+
+                row[ItemsTable.title] = request.title
+                row[ItemsTable.ean] = request.ean
+            }
+
+            updatedRows > 0
+        }
+    }
+    
+    fun deleteItem(id: Int): Boolean {
+        
+
+    return transaction {
+
+        val imageUrls =
+            ItemImagesTable
+                .selectAll()
+                .where { ItemImagesTable.itemId eq id }
+                .map {
+                    it[ItemImagesTable.url]
+                }
+
+        imageUrls.forEach { url ->
+            fileStorageService.deleteFile(url)
+        }
+
+        ItemImagesTable.deleteWhere {
+            ItemImagesTable.itemId eq id
+        }
+
+        StorageTable.deleteWhere {
+            StorageTable.itemId eq id
+        }
+
+        ItemsTable.deleteWhere {
+            ItemsTable.id eq id
+        } > 0
+    }
+}
+    fun addImage(
+        itemId: Int,
+        imageUrl: String,
+        sortOrder: Int
+        ) {
+        transaction {
+
+            ItemImagesTable.insert {
+
+                it[ItemImagesTable.itemId] = itemId
+                it[url] = imageUrl
+                it[ItemImagesTable.sortOrder] = sortOrder
+            }
+        }
+    }
+    fun deleteImage(imageId: Int): Boolean {
+
+    return transaction {
+            val image =
+                ItemImagesTable
+                    .selectAll()
+                    .where { ItemImagesTable.id eq imageId }
+                    .singleOrNull()
+
+            if (image == null) {
+                return@transaction false
+            }
+
+            val imageUrl =
+                image[ItemImagesTable.url]
+
+            fileStorageService.deleteFile(imageUrl)
+
+            ItemImagesTable.deleteWhere {
+                ItemImagesTable.id eq imageId
+            } > 0
+        }
+    } 
+    fun getWarehouses(): List<WarehouseResponse> {
+    return transaction {
+
+        WarehousesTable
+            .selectAll()
+            .map { row ->
+
+                WarehouseResponse(
+                    id = row[WarehousesTable.id],
+                    code = row[WarehousesTable.warehouseCode],
+                    name = row[WarehousesTable.warehouseName]
+                )
+            }
+        }
+    } 
+    fun addOrUpdateStorage(itemId: Int,warehouseId: Int,count: Int) {
+        transaction {
+            if (count == 0) {
+                StorageTable.deleteWhere {
+                    (StorageTable.itemId eq itemId) and
+                    (StorageTable.warehouseId eq warehouseId)
+                }
+                return@transaction
+            }
+            val existing =
+                StorageTable
+                    .selectAll()
+                    .where {
+                        (StorageTable.itemId eq itemId) and
+                        (StorageTable.warehouseId eq warehouseId)
+                    }
+                    .singleOrNull()
+            if (existing == null) {
+                StorageTable.insert {
+                    it[StorageTable.itemId] = itemId
+                    it[StorageTable.warehouseId] = warehouseId
+                    it[StorageTable.count] = count
+                }
+            } else {
+                StorageTable.update(
+                    {
+                        (StorageTable.itemId eq itemId) and
+                        (StorageTable.warehouseId eq warehouseId)
+                    }
+                ) {
+                    it[StorageTable.count] = count
+                }
+            }
+        }
+    }
+    fun replaceStorage(itemId: Int,request: ReplaceStorageRequest) {
+        transaction {
+            StorageTable.deleteWhere {
+                StorageTable.itemId eq itemId
+            }
+            request.storageLocations
+                .filter {
+                    it.count > 0
+                }
+                .forEach { storage ->
+                    StorageTable.insert {
+
+                        it[StorageTable.itemId] =
+                            itemId
+
+                        it[warehouseId] =
+                            storage.warehouseId
+
+                        it[count] =
+                            storage.count
+                    }
+                }
+        }
+    }
+}
