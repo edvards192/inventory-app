@@ -12,8 +12,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,6 +30,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.navigationBarsPadding
+import android.widget.Toast
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,9 +70,15 @@ fun CreateItemScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Create Item") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF04318C),
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -225,88 +233,56 @@ fun CreateItemScreen(
                         }
 
                 OutlinedTextField(
-
-                    value =
-                        selectedWarehouse?.let {
-                            "${it.code} - ${it.name}"
-                        } ?: "",
-
+                    value = selectedWarehouse?.let { "${it.code} - ${it.name}" } ?: "",
                     onValueChange = {},
-
+                    shape = RoundedCornerShape(24.dp),
                     readOnly = true,
-
-                    label = {
-                        Text("Warehouse")
-                    },
-
+                    label = { Text("Select Warehouse") },
                     modifier =
                         Modifier
                             .menuAnchor()
                             .fillMaxWidth()
                 )
-
                 ExposedDropdownMenu(
-
                     expanded = expanded,
-
                     onDismissRequest = {
                         expanded = false
                     }
-
                 ) {
-
                     state.availableWarehouses
-
                         .filter { warehouse ->
-
                             state.storageLocations.none {
                                 it.warehouseId ==
                                         warehouse.id
                             }
                         }
-
                         .forEach { warehouse ->
-
                             DropdownMenuItem(
-
                                 text = {
                                     Text(
                                         "${warehouse.code} - ${warehouse.name}"
                                     )
                                 },
-
                                 onClick = {
-
                                     viewModel.selectWarehouse(
                                         warehouse.id
                                     )
-
                                     expanded = false
                                 }
                             )
                         }
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Button(
-
                 onClick = {
                     viewModel.addWarehouse()
                 },
-
-                enabled =
-                    state.selectedWarehouseId != null,
-
-                modifier =
-                    Modifier.fillMaxWidth()
-
+                enabled = state.selectedWarehouseId != null,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Add Warehouse")
             }
-
-
 
             OutlinedButton(
                 onClick = {
@@ -317,25 +293,19 @@ fun CreateItemScreen(
                 Text("Add Image")
             }
             if (state.imageUris.isNotEmpty()) {
-
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-
                     items(state.imageUris) { imageUri ->
-
                         Box {
-
                             Card {
-
                                 AsyncImage(
                                     model = imageUri,
                                     contentDescription = null,
                                     modifier = Modifier.size(72.dp)
                                 )
                             }
-
                             Text(
                                 text = "✕",
                                 color = Color.White,
@@ -363,7 +333,14 @@ fun CreateItemScreen(
                     viewModel.createItem(
                         context = context,
                         ean = ean,
-                        onSuccess = onSuccess
+                        onSuccess = {
+                            Toast.makeText(
+                                context,
+                                "Item created successfully.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onSuccess()
+                        }
                     )
                 },
                 enabled = !state.isLoading && state.title.isNotBlank() && ean.length == 13,

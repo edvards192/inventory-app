@@ -63,7 +63,7 @@ class ScannerViewModel : ViewModel() {
 
                 _state.value =
                     ScannerState(
-                        error = e.message
+                        error = "Cannot connect to server."
                     )
             }
         }

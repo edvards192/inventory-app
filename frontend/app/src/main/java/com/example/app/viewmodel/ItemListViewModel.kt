@@ -36,6 +36,9 @@ class ItemListViewModel : ViewModel() {
                 }
         }
     }
+    fun refresh() {
+        loadItems(_state.value.searchText)
+    }
     fun onSearchChange(value: String) {
         _state.value =
             _state.value.copy(
@@ -46,12 +49,13 @@ class ItemListViewModel : ViewModel() {
 
     fun loadItems(search: String = "") {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
             try {
+            _state.value = _state.value.copy(isLoading = true, error = null)
                 val items = repository.getItems(search)
                 _state.value = _state.value.copy(items = items, isLoading = false)
             } catch (e: Exception) {
-                _state.value = _state.value.copy(error = e.message, isLoading = false)
+                _state.value = _state.value.copy(error = "Cannot connect to server.\nPlease check your connection.",
+                    isLoading = false)
             }
         }
     }

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import android.content.Context
 import android.net.Uri
-import com.example.app.domain.util.uriToFile
+import com.example.app.domain.util.uriToCompressedFile
 import com.example.app.domain.model.Storage
 import com.example.app.domain.model.Warehouse
 
@@ -36,14 +36,12 @@ class ItemDetailViewModel : ViewModel() {
     fun loadWarehouses() {
 
         viewModelScope.launch {
-
-            val warehouses =
-                repository.getWarehouses()
-
-            _state.value =
-                _state.value.copy(
-                    availableWarehouses = warehouses
-                )
+            try {
+                val warehouses = repository.getWarehouses()
+                _state.value = _state.value.copy(availableWarehouses = warehouses)
+        } catch (e: Exception) {
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = "Cannot connect to server.")}
         }
     }
 
@@ -79,9 +77,9 @@ class ItemDetailViewModel : ViewModel() {
                 )
 
             } catch (e: Exception) {
-
+                e.printStackTrace()
                 _state.value = _state.value.copy(
-                    error = e.message,
+                    error = "Cannot connect to server.",
                     isLoading = false
                 )
             }
@@ -92,16 +90,14 @@ class ItemDetailViewModel : ViewModel() {
         viewModelScope.launch {
 
             try {
-
                 val success = repository.deleteItem(id)
-
                 if (success) {
                     onSuccess()
                 }
-
             } catch (e: Exception) {
+                e.printStackTrace()
                 _state.value = _state.value.copy(
-                    error = e.message
+                    error = "Cannot connect to server."
                 )
             }
         }
@@ -160,18 +156,21 @@ class ItemDetailViewModel : ViewModel() {
                 }
                 onSuccess()
             } catch (e: Exception) {
-                _state.value = _state.value.copy(error = e.message)
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = "Cannot connect to server.")
             }
         }
     }
     fun deleteImage(itemId: Int, imageId: Int) {
         viewModelScope.launch {
-
-            val success =
-                repository.deleteImage(imageId)
-
-            if (success) {
-                loadItem(itemId, showLoading = false)
+            try {
+                val success = repository.deleteImage(imageId)
+                if (success) {
+                    loadItem(itemId, showLoading = false)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = "Cannot connect to server.")
             }
         }
     }
@@ -181,22 +180,28 @@ class ItemDetailViewModel : ViewModel() {
         uri: Uri
     ) {
         viewModelScope.launch {
-
-            val file =
-                uriToFile(
+            try {
+                val file = uriToCompressedFile(
                     context,
                     uri
                 )
-
-            val success =
-                repository.uploadImage(
-                    itemId = itemId,
-                    sortOrder = 0,
-                    file = file
-                )
-
-            if (success) {
-                loadItem(itemId, showLoading = false)
+                val nextSortOrder = _state.value.item
+                        ?.images
+                        ?.maxOfOrNull { it.sortOrder }
+                        ?.plus(1)
+                        ?: 0
+                val success =
+                    repository.uploadImage(
+                        itemId = itemId,
+                        sortOrder = nextSortOrder,
+                        file = file
+                    )
+                if (success) {
+                    loadItem(itemId, showLoading = false)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = "Cannot connect to server.")
             }
         }
     }
@@ -288,13 +293,9 @@ class ItemDetailViewModel : ViewModel() {
 
                     } else {
 
-                        if (count <= 0) {
-                            null
-                        } else {
-                            storage.copy(
-                                count = count
-                            )
-                        }
+                        storage.copy(
+                            count = count.coerceAtLeast(0)
+                        )
                     }
                 }
 

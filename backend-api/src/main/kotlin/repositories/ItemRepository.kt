@@ -78,6 +78,7 @@ class ItemRepository {
                     ean = row[ItemsTable.ean],
                     storageLocations = getStorageByItemId(id),
                     images = getImagesByItemId(id)
+                                .take(1)
                 )
             }
         }

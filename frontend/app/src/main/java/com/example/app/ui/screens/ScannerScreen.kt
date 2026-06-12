@@ -30,25 +30,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
 
     val context = LocalContext.current
-    val previewView = remember {
-        mutableStateOf<PreviewView?>(null)
-    }
+    val previewView = remember { mutableStateOf<PreviewView?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    var scanned by remember {
-        mutableStateOf(false)
-    }
-    var scanSuccess by remember {
-        mutableStateOf(false)
-    }
+    var scanned by remember { mutableStateOf(false) }
     val viewModel: ScannerViewModel = viewModel()
     val state by viewModel.state.collectAsState()
     var hasCameraPermission by remember {
@@ -59,17 +50,14 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
-
     val permissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-
             hasCameraPermission = granted
         }
 
     LaunchedEffect(Unit) {
-
         if (!hasCameraPermission) {
             permissionLauncher.launch(
                 Manifest.permission.CAMERA
@@ -78,26 +66,20 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
     }
 
     if (hasCameraPermission) {
-
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
                 AndroidView(
-
                     modifier = Modifier.fillMaxSize(),
-
                     factory = { ctx ->
-
                         PreviewView(ctx).also {
                             previewView.value = it
                         }
                     }
                 )
-
             Canvas(
                 modifier = Modifier.fillMaxSize()
             ) {
-
                 val frameWidth = size.width * 0.8f
                 val frameHeight = size.height * 0.25f
 
@@ -108,24 +90,16 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 val bottom = top + frameHeight
 
                 val corner = frameWidth * 0.12f
-
-                val color =
-                    if (scanSuccess)
-                        Color.Green
-                    else
-                        Color.White
-
+                val color = Color.White
                 val stroke = 8f
 
                 // Top left
-
                 drawLine(
                     color,
                     Offset(left, top),
                     Offset(left + corner, top),
                     stroke
                 )
-
                 drawLine(
                     color,
                     Offset(left, top),
@@ -134,14 +108,12 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 )
 
                 // Top right
-
                 drawLine(
                     color,
                     Offset(right, top),
                     Offset(right - corner, top),
                     stroke
                 )
-
                 drawLine(
                     color,
                     Offset(right, top),
@@ -150,14 +122,12 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 )
 
                 // Bottom left
-
                 drawLine(
                     color,
                     Offset(left, bottom),
                     Offset(left + corner, bottom),
                     stroke
                 )
-
                 drawLine(
                     color,
                     Offset(left, bottom),
@@ -166,14 +136,12 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 )
 
                 // Bottom right
-
                 drawLine(
                     color,
                     Offset(right, bottom),
                     Offset(right - corner, bottom),
                     stroke
                 )
-
                 drawLine(
                     color,
                     Offset(right, bottom),
@@ -182,17 +150,13 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 )
             }
             }
-
         } else {
 
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-
-                Text(
-                    "Camera permission required."
-                )
+                Text("Camera permission required.")
             }
         }
         LaunchedEffect(
@@ -202,23 +166,18 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
         ) {
 
             state.navigateToItemId?.let {
-
+                scanned = false
                 onItemFound(it)
-
                 viewModel.clearNavigation()
             }
-
             state.navigateToCreateEan?.let {
-
+                scanned = false
                 onCreateItem(it)
-
                 viewModel.clearNavigation()
             }
-
             state.error?.let {
-
                 println("ERROR: $it")
-
+                scanned = false
                 viewModel.clearNavigation()
             }
         }
@@ -228,7 +187,6 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
         ) {
 
             val pv = previewView.value ?: return@LaunchedEffect
-
             if (!hasCameraPermission)
                 return@LaunchedEffect
 
@@ -237,41 +195,21 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
 
             cameraProviderFuture.addListener({
 
-                val cameraProvider =
-                    cameraProviderFuture.get()
-
-                val preview =
-                    Preview.Builder().build()
-
-                val imageAnalysis =
-                    ImageAnalysis.Builder()
-                        .build()
-
-                val scanner =
-                    BarcodeScanning.getClient()
-
-                imageAnalysis.setAnalyzer(
-
-                    ContextCompat.getMainExecutor(context)
-
-                ) { imageProxy ->
-
-                    val mediaImage =
-                        imageProxy.image
-
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build()
+                val imageAnalysis = ImageAnalysis.Builder().build()
+                val scanner = BarcodeScanning.getClient()
+                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
+                    val mediaImage = imageProxy.image
                     if (mediaImage != null) {
-
                         val image =
                             InputImage.fromMediaImage(
                                 mediaImage,
                                 imageProxy.imageInfo.rotationDegrees
                             )
-
                         scanner
                             .process(image)
-
                             .addOnSuccessListener { barcodes ->
-
                                 for (barcode in barcodes) {
                                     if (scanned)
                                         break
@@ -280,14 +218,10 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                                     viewModel.onBarcodeScanned(ean)
                                 }
                             }
-
                             .addOnCompleteListener {
-
                                 imageProxy.close()
                             }
-
                     } else {
-
                         imageProxy.close()
                     }
                 }

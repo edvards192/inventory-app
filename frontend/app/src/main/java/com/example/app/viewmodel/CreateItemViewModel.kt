@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.app.data.repository.ItemRepository
 import com.example.app.domain.model.Item
-import com.example.app.domain.util.uriToFile
+import com.example.app.domain.util.uriToCompressedFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -39,60 +39,72 @@ class CreateItemViewModel : ViewModel() {
         _state.value = _state.value.copy(ean = value)
     }
 
-    fun createItem(context: Context,ean: String, onSuccess: () -> Unit) {
-
+    fun createItem(context: Context, ean: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(isLoading = true, error = null)
-                println("TITLE='${_state.value.title}'")
-                println("EAN='${_state.value.ean}'")
-                println("LEN=${_state.value.ean.length}")
                 val result = repository.createItem(
-                    Item(
-                        id = 0,
-                        title = _state.value.title,
-                        ean = ean
+                    Item(id = 0, title = _state.value.title, ean = ean)
                     )
-                )
-
-                if (result.success && result.itemId != null) {
-
-                    _state.value.imageUris.forEachIndexed { index, uriString ->
-
-                        val file = uriToFile(
-                            context,
-                            Uri.parse(uriString)
+                if (!result.success || result.itemId == null) {
+                    _state.value =
+                        _state.value.copy(
+                            isLoading = false,
+                            error = "Failed to create item."
                         )
-
-                        repository.uploadImage(
-                            itemId = result.itemId,
-                            sortOrder = index,
-                            file = file
-                        )
-                        repository.replaceStorage(
-                            itemId = result.itemId,
-                            storage = _state.value.storageLocations
-                        )
-                    }
-
-                    _state.value = CreateItemState()
-                    onSuccess()
+                    return@launch
                 }
+                _state.value.imageUris
+                    .forEachIndexed { index, uriString ->
+                        val file =
+                            uriToCompressedFile(
+                                context,
+                                Uri.parse(uriString)
+                            )
+                        val success =
+                            repository.uploadImage(
+                                itemId = result.itemId,
+                                sortOrder = index,
+                                file = file
+                            )
+                        if (!success) {
+                            _state.value =
+                                _state.value.copy(
+                                    isLoading = false,
+                                    error = "Failed to upload image."
+                                )
+
+                            return@launch
+                        }
+                    }
+                val storageSuccess =
+                    repository.replaceStorage(
+                        itemId = result.itemId,
+                        storage = _state.value.storageLocations
+                    )
+                if (!storageSuccess) {
+                    _state.value =
+                        _state.value.copy(
+                            isLoading = false,
+                            error = "Failed to save storage."
+                        )
+                    return@launch
+                }
+                _state.value = CreateItemState()
+                onSuccess()
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message
-                )
+                e.printStackTrace()
+                _state.value = _state.value.copy(isLoading = false, error = "Cannot connect to server.")
             }
         }
     }
     fun loadWarehouses() {
         viewModelScope.launch {
-            _state.value =
-                _state.value.copy(
-                    availableWarehouses =
-                        repository.getWarehouses()
-                )
+            try {
+                _state.value = _state.value.copy(availableWarehouses = repository.getWarehouses())
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = "Cannot connect to server.")
+            }
         }
     }
     init {
@@ -180,29 +192,15 @@ class CreateItemViewModel : ViewModel() {
                 storageLocations = updated
             )
     }
-
     fun addImage(uri: String) {
 
         _state.value = _state.value.copy(
             imageUris = _state.value.imageUris + uri
         )
     }
-
     fun removeImage(uri: String) {
         _state.value = _state.value.copy(
             imageUris = _state.value.imageUris.filterNot { it == uri }
         )
-    }
-    fun setInitialEan(ean: String) {
-
-        println("SET INITIAL EAN: $ean")
-        println("BEFORE: ${_state.value.ean}")
-
-        _state.value =
-            _state.value.copy(
-                ean = ean
-            )
-        println("VM: ${this.hashCode()}")
-        println("AFTER: ${_state.value.ean}")
     }
 }

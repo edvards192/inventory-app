@@ -18,7 +18,6 @@ import coil.compose.AsyncImage
 import com.example.app.R
 import com.example.app.viewmodel.ItemDetailViewModel
 import com.example.app.domain.util.getListImage
-import android.util.Log
 import com.example.app.domain.util.fullUrl
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,15 +33,16 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.*
+import kotlinx.coroutines.launch
+import android.widget.Toast
+import coil.request.ImageRequest
+import androidx.compose.material.icons.filled.Edit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemDetailScreen(
     itemId: Int,
     onBack: () -> Unit,
-    onUpdateSuccess: () -> Unit,
     onDeleteSuccess: () -> Unit,
     viewModel: ItemDetailViewModel = viewModel()
 ) {
@@ -53,9 +53,7 @@ fun ItemDetailScreen(
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-
         uri?.let {
-
             viewModel.uploadImage(
                 context = context,
                 itemId = itemId,
@@ -63,26 +61,40 @@ fun ItemDetailScreen(
             )
         }
     }
-
-    LaunchedEffect(Unit) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(itemId) {
         viewModel.loadItem(itemId)
     }
-
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
         topBar = {
             TopAppBar(
-                title = { Text("Item Detail") },
+                title = { Text(state.item?.title ?: "Item Details") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF04318C),
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.item != null && !state.isEditing) {
+                        IconButton(onClick = { viewModel.startEditing() }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
                     }
                 }
             )
         }
     ) { padding ->
-
         when {
-
             state.isLoading -> {
                 Box(
                     modifier = Modifier
@@ -93,7 +105,6 @@ fun ItemDetailScreen(
                     CircularProgressIndicator()
                 }
             }
-
             state.error != null -> {
                 Box(
                     modifier = Modifier
@@ -104,24 +115,19 @@ fun ItemDetailScreen(
                     Text(state.error!!)
                 }
             }
-
             state.item != null -> {
-
                 val item = state.item!!
                 val images = item.images.sortedBy { it.sortOrder }
                 val pagerState = rememberPagerState(pageCount = { images.size.coerceAtLeast(1) })
-
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .padding(padding)
                         .padding(horizontal = 16.dp)
                         .navigationBarsPadding()
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ){
-                    Log.d("DETAIL", "images=${item.images.size}")
-                    Log.d("DETAIL", "url=${item.getListImage()}")
-
                     // IMAGE — swipeable in detail, same default logic as list view
                     if (images.isEmpty()) {
                         AsyncImage(
@@ -143,7 +149,10 @@ fun ItemDetailScreen(
                                     .aspectRatio(0.75f)
                             ) { page ->
                                 AsyncImage(
-                                    model = images[page].fullUrl(),
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(images[page].fullUrl())
+                                        .crossfade(true)
+                                        .build(),
                                     contentDescription = null,
                                     placeholder = painterResource(R.drawable.ic_placeholder),
                                     error = painterResource(R.drawable.ic_placeholder),
@@ -151,7 +160,6 @@ fun ItemDetailScreen(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
-
                             // Page indicator dots
                             if (images.size > 1) {
                                 Row(
@@ -175,61 +183,39 @@ fun ItemDetailScreen(
                             }
                         }
                     }
-
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-
                         // VIEW MODE
                         if (!state.isEditing) {
-
                             Text(
                                 text = item.title,
                                 style = MaterialTheme.typography.headlineSmall
                             )
-
                             Text("EAN: ${item.ean}")
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Text(
-                                text = "Storage",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
                             item.storageLocations.forEach { storage ->
-
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-
-                                    Text(
-                                        "${storage.warehouseCode} - ${storage.warehouseName}"
-                                    )
-
-                                    Text(
-                                        storage.count.toString()
-                                    )
+                                    Text("${storage.warehouseCode} - ${storage.warehouseName}")
+                                    Text(storage.count.toString())
                                 }
                             }
-
                             HorizontalDivider()
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-
                                 Text(
-                                    "Total",
+                                    "Total Quantity",
                                     style = MaterialTheme.typography.titleMedium
                                 )
-
                                 Text(
                                     item.storageLocations
                                         .sumOf { it.count }
@@ -237,21 +223,11 @@ fun ItemDetailScreen(
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
-
                             Spacer(modifier = Modifier.height(16.dp))
-                            Spacer(modifier = Modifier.weight(1f))
 
-                            Button(
-                                onClick = { viewModel.startEditing() },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Edit")
-                            }
                         }
-
                         // EDIT MODE
                         if (state.isEditing) {
-
                             OutlinedTextField(
                                 value = state.editTitle,
                                 onValueChange = viewModel::onTitleChange,
@@ -259,7 +235,6 @@ fun ItemDetailScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(24.dp)
                             )
-
                             OutlinedTextField(
                                 value = state.editEan,
                                 onValueChange = viewModel::onEanChange,
@@ -269,32 +244,24 @@ fun ItemDetailScreen(
                                 supportingText = { Text("${state.editEan.length}/13") },
                                 isError = state.editEan.isNotEmpty() && state.editEan.length != 13
                             )
-                            Text(
-                                "Storage",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Text("Storage", style = MaterialTheme.typography.titleMedium)
 
                             Spacer(modifier = Modifier.height(8.dp))
-                            if(state.editStorageLocations.isEmpty()){
+                            if (state.editStorageLocations.isEmpty()){
                                 Text(
                                     "No warehouses assigned.",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }else{
-
+                            } else {
                             state.editStorageLocations.forEach { storage ->
-
                                 Row(
-
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-
                                     Text(
                                         text = "${storage.warehouseCode} - ${storage.warehouseName}",
                                         modifier = Modifier.weight(1f)
                                     )
-
                                     IconButton(
                                         modifier = Modifier.size(40.dp),
                                         onClick = {
@@ -307,101 +274,72 @@ fun ItemDetailScreen(
                                     }
 
                                     OutlinedTextField(
-                                        keyboardOptions =
-                                            KeyboardOptions(
-                                                keyboardType =
-                                                    KeyboardType.Number
-                                            ),
-                                        textStyle =
-                                            LocalTextStyle.current.copy(
-                                                textAlign = TextAlign.Center
-                                            ),
-
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
+                                        shape = RoundedCornerShape(24.dp),
                                         value = storage.count.toString(),
-
                                         onValueChange = { value ->
 
-                                            value.toIntOrNull()?.let {
-
+                                            if (value.isEmpty()) {
                                                 viewModel.setStorageCount(
                                                     storage.warehouseId,
-                                                    it
+                                                    0
                                                 )
+                                            } else {
+                                                val number = value.toIntOrNull()
+                                                if (number != null && number >= 0) {
+                                                    viewModel.setStorageCount(
+                                                        storage.warehouseId,
+                                                        number
+                                                    )
+                                                }
                                             }
                                         },
-
                                         singleLine = true,
-
                                         modifier = Modifier.width(80.dp)
                                     )
-
                                     IconButton(
                                         modifier = Modifier.size(40.dp),
                                         onClick = {
-                                            viewModel.increaseStorage(
-                                                storage.warehouseId
-                                            )
+                                            viewModel.increaseStorage(storage.warehouseId)
                                         }
                                     ) {
                                         Text("+")
                                     }
                                 }
-
                                 Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
                             HorizontalDivider()
-
                             Spacer(modifier = Modifier.height(8.dp))
                             var expanded by remember {
                                 mutableStateOf(false)
                             }
 
                             ExposedDropdownMenuBox(
-
                                 expanded = expanded,
-
-                                onExpandedChange = {
-                                    expanded = !expanded
-                                }
-
+                                onExpandedChange = { expanded = !expanded }
                             ) {
-
                                 val selectedWarehouse =
                                     state.availableWarehouses
                                         .firstOrNull {
                                             it.id == state.selectedWarehouseId
                                         }
-
                                 OutlinedTextField(
-
-                                    value =
-                                        selectedWarehouse?.name ?: "",
-
+                                    value = selectedWarehouse?.name ?: "",
                                     onValueChange = {},
-
                                     readOnly = true,
-
-                                    label = {
-                                        Text("Warehouse")
-                                    },
-
+                                    shape = RoundedCornerShape(24.dp),
+                                    label = { Text("Select Warehouse") },
                                     modifier =
                                         Modifier
                                             .menuAnchor()
                                             .fillMaxWidth()
                                 )
-
                                 ExposedDropdownMenu(
-
                                     expanded = expanded,
-
-                                    onDismissRequest = {
-                                        expanded = false
-                                    }
-
+                                    onDismissRequest = { expanded = false }
                                 ) {
-
                                     state.availableWarehouses
                                         .filter { warehouse ->
                                             state.editStorageLocations.none {
@@ -409,21 +347,16 @@ fun ItemDetailScreen(
                                             }
                                         }
                                         .forEach { warehouse ->
-
                                         DropdownMenuItem(
-
                                             text = {
                                                 Text(
                                                     "${warehouse.code} - ${warehouse.name}"
                                                 )
                                             },
-
                                             onClick = {
-
                                                 viewModel.selectWarehouse(
                                                     warehouse.id
                                                 )
-
                                                 expanded = false
                                             }
                                         )
@@ -431,7 +364,6 @@ fun ItemDetailScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-
                             Button(
                                 onClick = {
                                     viewModel.addWarehouse()
@@ -449,30 +381,24 @@ fun ItemDetailScreen(
                             ) {
                                 Text("Add Image")
                             }
-
                             if (images.isNotEmpty()) {
-
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-
-                                    items(images) { image ->
-
+                                    items(items = images,
+                                        key = { it.id }
+                                    ) { image ->
                                         Box {
-
                                             Card {
-
                                                 AsyncImage(
                                                     model = image.fullUrl(),
                                                     contentDescription = null,
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier
                                                         .size(72.dp)
-
                                                 )
                                             }
-
                                             Text(
                                                 text = "✕",
                                                 color = Color.White,
@@ -495,7 +421,6 @@ fun ItemDetailScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.height(24.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -503,16 +428,19 @@ fun ItemDetailScreen(
                                 Button(
                                     onClick = {
                                         viewModel.updateItem(itemId) {
-                                            onUpdateSuccess()
                                             viewModel.cancelEditing()
                                             viewModel.loadItem(itemId)
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    "Item updated successfully."
+                                                )
+                                            }
                                         }
                                     },
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text("Save")
                                 }
-
                                 OutlinedButton(
                                     onClick = { viewModel.cancelEditing() },
                                     modifier = Modifier.weight(1f)
@@ -520,8 +448,7 @@ fun ItemDetailScreen(
                                     Text("Cancel")
                                 }
                             }
-
-                            // DELETE — only visible in edit mode
+                            // DELETE only visible in edit mode
                             Button(
                                 onClick = { showDeleteDialog = true },
                                 colors = ButtonDefaults.buttonColors(
@@ -534,7 +461,6 @@ fun ItemDetailScreen(
                         }
                     }
                 }
-
                 // DELETE DIALOG
                 if (showDeleteDialog) {
                     AlertDialog(
@@ -546,6 +472,11 @@ fun ItemDetailScreen(
                                 onClick = {
                                     viewModel.deleteItem(item.id) {
                                         showDeleteDialog = false
+                                        Toast.makeText(
+                                            context,
+                                            "Item deleted successfully.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                         onDeleteSuccess()
                                     }
                                 }
