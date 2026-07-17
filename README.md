@@ -18,9 +18,9 @@ A full-stack Android application for warehouse inventory management.
 ## Screenshots
 <table>
   <tr>
-    <td><img src="screenshots/main.png" width="400"/></td>
-    <td><img src="screenshots/inspect.png" width="400"/></td>
-	<td><img src="screenshots/filter.png" width="400"/></td>
+    <td><img src="screenshots/main.jpg" width="400"/></td>
+    <td><img src="screenshots/inspect.jpg" width="400"/></td>
+	<td><img src="screenshots/filter.jpg" width="400"/></td>
   </tr>
 </table>
 
