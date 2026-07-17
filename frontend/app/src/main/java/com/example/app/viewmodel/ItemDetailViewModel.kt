@@ -29,7 +29,6 @@ data class ItemDetailState(
 class ItemDetailViewModel : ViewModel() {
 
     private val repository = ItemRepository()
-
     private val _state = MutableStateFlow(ItemDetailState())
     val state: StateFlow<ItemDetailState> = _state
 
@@ -39,7 +38,7 @@ class ItemDetailViewModel : ViewModel() {
             try {
                 val warehouses = repository.getWarehouses()
                 _state.value = _state.value.copy(availableWarehouses = warehouses)
-        } catch (e: Exception) {
+            } catch (e: Exception) {
                 e.printStackTrace()
                 _state.value = _state.value.copy(error = "Cannot connect to server.")}
         }
@@ -61,11 +60,8 @@ class ItemDetailViewModel : ViewModel() {
                     isLoading = true
                 )
             }
-
             try {
-
                 val item = repository.getItemById(id)
-
                 _state.value = ItemDetailState(
                     item = item,
                     isEditing = wasEditing,
@@ -266,7 +262,6 @@ class ItemDetailViewModel : ViewModel() {
         }
         _state.value =
             _state.value.copy(
-
                 editStorageLocations =
                     _state.value.editStorageLocations +
                             Storage(
@@ -275,7 +270,6 @@ class ItemDetailViewModel : ViewModel() {
                                 warehouseName = warehouse.name,
                                 count = 1
                             ),
-
                 selectedWarehouseId = null
             )
     }
@@ -283,22 +277,15 @@ class ItemDetailViewModel : ViewModel() {
         warehouseId: Int,
         count: Int
     ) {
-
         val updated =
             _state.value.editStorageLocations
-                .mapNotNull { storage ->
-
+                .map { storage ->
                     if (storage.warehouseId != warehouseId) {
                         storage
-
                     } else {
-
-                        storage.copy(
-                            count = count.coerceAtLeast(0)
-                        )
+                        storage.copy(count = count.coerceAtLeast(0))
                     }
                 }
-
         _state.value =
             _state.value.copy(
                 editStorageLocations = updated

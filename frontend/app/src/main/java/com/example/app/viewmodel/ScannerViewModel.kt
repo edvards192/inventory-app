@@ -15,52 +15,28 @@ data class ScannerState(
 )
 
 class ScannerViewModel : ViewModel() {
-
     private val repository = ItemRepository()
-
-    private val _state =
-        MutableStateFlow(
-            ScannerState()
-        )
+    private val _state = MutableStateFlow(ScannerState())
 
     val state: StateFlow<ScannerState> = _state
-
-    fun onBarcodeScanned(
-        ean: String
-    ) {
+    fun onBarcodeScanned(ean: String) {
 
         viewModelScope.launch {
-
             _state.value =
                 _state.value.copy(
                     isLoading = true,
                     error = null
                 )
-
             try {
-
-                val item =
-                    repository.getItemByEan(ean)
+                val item = repository.getItemByEan(ean)
 
                 if (item != null) {
-
-                    _state.value =
-                        ScannerState(
-                            navigateToItemId =
-                                item.id
-                        )
-
+                    _state.value = ScannerState(navigateToItemId = item.id)
                 } else {
-
-                    _state.value =
-                        ScannerState(
-                            navigateToCreateEan =
-                                ean
-                        )
+                    _state.value = ScannerState(navigateToCreateEan = ean)
                 }
-
             } catch (e: Exception) {
-
+                e.printStackTrace()
                 _state.value =
                     ScannerState(
                         error = "Cannot connect to server."
@@ -68,10 +44,7 @@ class ScannerViewModel : ViewModel() {
             }
         }
     }
-
     fun clearNavigation() {
-
-        _state.value =
-            ScannerState()
+        _state.value = ScannerState()
     }
 }

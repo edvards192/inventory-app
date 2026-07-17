@@ -22,10 +22,55 @@ fun Route.itemRoutes() {
     val repository = ItemRepository()
 
     get("/items") {
-        val search = call.request   
-            .queryParameters["search"]
+        val search =
+            call.request
+                .queryParameters["search"]
                 ?: ""
-        val items = repository.getAllItems(search)
+        val sort =
+            call.request
+                .queryParameters["sort"]
+                ?: "updatedDesc"
+        val stockFilter =
+            call.request
+                .queryParameters["stockFilter"]
+                ?: "all"
+        val warehouseIds =
+            call.request
+                .queryParameters["warehouseIds"]
+                ?.split(",")
+                ?.mapNotNull {
+                    it.toIntOrNull()
+                }
+                ?: emptyList()
+        val minQuantity =
+            call.request
+                .queryParameters["minQuantity"]
+                ?.toIntOrNull()
+        val maxQuantity =
+            call.request
+                .queryParameters["maxQuantity"]
+                ?.toIntOrNull()
+        val page =
+            call.request
+                .queryParameters["page"]
+                ?.toIntOrNull()
+                ?: 1
+        val limit =
+            call.request
+                .queryParameters["limit"]
+                ?.toIntOrNull()
+                ?: 25
+        val items =
+            repository.getAllItems(
+                search,
+                sort,
+                stockFilter,
+                warehouseIds,
+                minQuantity,
+                maxQuantity,
+                page,
+                limit
+            )
         call.respond(
             ApiResponse(
                 data = items,
@@ -35,33 +80,21 @@ fun Route.itemRoutes() {
     }
 
     get("/warehouses") {
-
-    val warehouses =
-        repository.getWarehouses()
-
-    call.respond(
-        ApiResponse(
-            data = warehouses,
-            error = null
+        val warehouses = repository.getWarehouses()
+        call.respond(
+            ApiResponse(
+                data = warehouses,
+                error = null
+            )
         )
-    )
     }
     get("/items/ean/{ean}") {
-
-        val ean =
-            call.parameters["ean"]
-
+        val ean = call.parameters["ean"]
         if (ean == null) {
-
-            call.respondValidationError(
-                "Invalid EAN"
-            )
-
+            call.respondValidationError("Invalid EAN")
             return@get
         }
-
-        val item =
-            repository.getItemByEan(ean)
+        val item = repository.getItemByEan(ean)
 
         if (item == null) {
             call.respond(
@@ -72,33 +105,25 @@ fun Route.itemRoutes() {
             )
             return@get
         }
-
         call.respond(
-
             ApiResponse(
-
                 data = item,
-
                 error = null
             )
         )
     }
     get("/items/{id}") {
-
         val id = call.parameters["id"]?.toIntOrNull()
-
         if (id == null) {
             call.respondValidationError("Invalid item id")
             return@get
         }
-
         val item = repository.getItemById(id)
 
         if (item == null) {
             call.respondNotFoundError("Item not found")
             return@get
         }
-
         call.respond(
             ApiResponse(
                 data = item,
@@ -162,7 +187,6 @@ fun Route.itemRoutes() {
             call.respondValidationError("Invalid item id")
             return@delete
         }
-
         val deleted = repository.deleteItem(id)
 
         if (!deleted) {
@@ -229,88 +253,8 @@ fun Route.itemRoutes() {
                 data = mapOf(
                     "status" to "replaced"
                 ),
-
                 error = null
             )
         )
     }
-
-    
-    // Image upload with itemId in multipart form data
-    /*post("/upload") {
-        call.application.log.info("Multipart upload route hit: ${call.request.httpMethod.value} ${call.request.uri}")
-
-        val multipart = call.receiveMultipart()
-
-        var itemId: Int? = null
-        var imageUrl: String? = null
-
-        multipart.forEachPart { part ->
-
-            when (part) {
-                is PartData.FormItem -> {
-                    if (part.name == "itemId") {
-                        itemId = part.value.toIntOrNull()
-                        call.application.log.info("Multipart upload parsed itemId=$itemId")
-                    }
-                }
-
-                is PartData.FileItem -> {
-                    val extension = File(part.originalFileName ?: "")
-                        .extension
-
-                    val fileName = "${UUID.randomUUID()}.$extension"
-
-                    val file = File("uploads/$fileName")
-
-                    part.streamProvider().use { input ->
-                        file.outputStream().buffered().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-
-                    imageUrl = "http://192.168.101.4:8080/uploads/$fileName"
-                    call.application.log.info("Multipart upload saved file: imageUrl=$imageUrl")
-                }
-
-                else -> Unit
-            }
-
-            part.dispose()
-        }
-
-        if (itemId == null) {
-            call.respondValidationError("Missing or invalid itemId")
-            return@post
-        }
-        val validItemId = itemId!!
-
-        if (imageUrl == null) {
-            call.respondValidationError("No image uploaded")
-            return@post
-        }
-        val validImageUrl = checkNotNull(imageUrl)
-
-        val imageId = try {
-            repository.addImage(
-                itemId = validItemId,
-                imageUrl = validImageUrl,
-                sortOrder = 0
-                
-            )
-        } catch (cause: Throwable) {
-            call.application.log.error("Failed to save uploaded image URL: itemId=$validItemId, imageUrl=$validImageUrl", cause)
-            throw cause
-        }
-
-        call.application.log.info("Multipart upload saved image URL to database: imageId=$imageId, itemId=$validItemId")
-
-        call.respond(
-            HttpStatusCode.OK,
-            ApiResponse(
-                data = mapOf("url" to validImageUrl),
-                error = null
-            )
-        )
-    }*/
 }

@@ -14,24 +14,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.app.viewmodel.ScannerViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material3.Text
-import androidx.compose.ui.unit.dp
+
+@androidx.annotation.OptIn(ExperimentalGetImage::class)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {

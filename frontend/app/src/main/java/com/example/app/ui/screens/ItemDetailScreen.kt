@@ -19,7 +19,6 @@ import com.example.app.R
 import com.example.app.viewmodel.ItemDetailViewModel
 import com.example.app.domain.util.getListImage
 import com.example.app.domain.util.fullUrl
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -37,6 +36,9 @@ import kotlinx.coroutines.launch
 import android.widget.Toast
 import coil.request.ImageRequest
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +49,7 @@ fun ItemDetailScreen(
     viewModel: ItemDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -72,7 +74,7 @@ fun ItemDetailScreen(
         },
         topBar = {
             TopAppBar(
-                title = { Text(state.item?.title ?: "Item Details") },
+                title = { Text(state.item?.title ?: "Item Details", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF04318C),
                     titleContentColor = Color.White,
@@ -117,7 +119,9 @@ fun ItemDetailScreen(
             }
             state.item != null -> {
                 val item = state.item!!
-                val images = item.images.sortedBy { it.sortOrder }
+                val images = remember(item.images) {
+                    item.images.sortedBy { it.sortOrder }
+                }
                 val pagerState = rememberPagerState(pageCount = { images.size.coerceAtLeast(1) })
                 Column(
                     modifier = Modifier
@@ -128,10 +132,9 @@ fun ItemDetailScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ){
-                    // IMAGE — swipeable in detail, same default logic as list view
                     if (images.isEmpty()) {
                         AsyncImage(
-                            model = item.getListImage() ?: "",
+                            model = item.getListImage(),
                             contentDescription = null,
                             placeholder = painterResource(R.drawable.ic_placeholder),
                             error = painterResource(R.drawable.ic_placeholder),
@@ -191,10 +194,7 @@ fun ItemDetailScreen(
                     ) {
                         // VIEW MODE
                         if (!state.isEditing) {
-                            Text(
-                                text = item.title,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
+                            Text(text = item.title, style = MaterialTheme.typography.headlineSmall)
                             Text("EAN: ${item.ean}")
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -212,10 +212,7 @@ fun ItemDetailScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    "Total Quantity",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Text("Total Quantity", style = MaterialTheme.typography.titleMedium)
                                 Text(
                                     item.storageLocations
                                         .sumOf { it.count }
@@ -224,9 +221,10 @@ fun ItemDetailScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.height(16.dp))
-
                         }
+
                         // EDIT MODE
+
                         if (state.isEditing) {
                             OutlinedTextField(
                                 value = state.editTitle,
@@ -242,16 +240,18 @@ fun ItemDetailScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(24.dp),
                                 supportingText = { Text("${state.editEan.length}/13") },
-                                isError = state.editEan.isNotEmpty() && state.editEan.length != 13
+                                isError = state.editEan.isNotEmpty() && state.editEan.length != 13,
+                                keyboardOptions =
+                                    KeyboardOptions(
+                                        keyboardType =
+                                            KeyboardType.Number
+                                    )
                             )
                             Text("Storage", style = MaterialTheme.typography.titleMedium)
 
                             Spacer(modifier = Modifier.height(8.dp))
                             if (state.editStorageLocations.isEmpty()){
-                                Text(
-                                    "No warehouses assigned.",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text("No warehouses assigned.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                             state.editStorageLocations.forEach { storage ->
                                 Row(
@@ -333,7 +333,7 @@ fun ItemDetailScreen(
                                     label = { Text("Select Warehouse") },
                                     modifier =
                                         Modifier
-                                            .menuAnchor()
+                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
                                             .fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
@@ -399,23 +399,25 @@ fun ItemDetailScreen(
                                                         .size(72.dp)
                                                 )
                                             }
-                                            Text(
-                                                text = "✕",
-                                                color = Color.White,
+                                            Surface(
                                                 modifier = Modifier
                                                     .align(Alignment.TopEnd)
-                                                    .background(MaterialTheme.colorScheme.error)
                                                     .clickable {
                                                         viewModel.deleteImage(
                                                             itemId = item.id,
                                                             imageId = image.id
                                                         )
-                                                    }
-                                                    .padding(
-                                                        horizontal = 6.dp,
-                                                        vertical = 2.dp
-                                                    )
-                                            )
+                                                    },
+                                                color = MaterialTheme.colorScheme.error,
+                                                shape = RoundedCornerShape(bottomStart = 8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Delete image",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.padding(4.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -437,7 +439,12 @@ fun ItemDetailScreen(
                                             }
                                         }
                                     },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    enabled =
+                                        state.editTitle.isNotBlank()
+                                        && (state.editEan.isEmpty()
+                                        || state.editEan.length == 13)
+
                                 ) {
                                     Text("Save")
                                 }

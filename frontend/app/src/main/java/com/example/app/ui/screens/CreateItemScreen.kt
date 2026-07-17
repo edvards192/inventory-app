@@ -13,13 +13,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import coil.compose.AsyncImage
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
@@ -33,7 +31,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.layout.ContentScale
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,13 +45,9 @@ fun CreateItemScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    println("SCREEN VM: ${viewModel.hashCode()}")
     var ean by remember(initialEan) {
         mutableStateOf(
-            if (initialEan.isNotBlank())
-                initialEan
-            else
-                state.ean
+            initialEan.ifBlank { state.ean }
         )
     }
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -63,9 +58,9 @@ fun CreateItemScreen(
             viewModel.addImage(uri.toString())
         }
     }
-    LaunchedEffect(ean) {
+    /*LaunchedEffect(ean) {
         viewModel.onEanChange(ean)
-    }
+    }*/
     Scaffold(
         topBar = {
             TopAppBar(
@@ -92,8 +87,7 @@ fun CreateItemScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
                 .navigationBarsPadding(),
-            verticalArrangement =
-                Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedTextField(
                 value = state.title,
@@ -101,13 +95,13 @@ fun CreateItemScreen(
                 label = { Text("Title") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp)
-
             )
             OutlinedTextField(
                 value = ean,
                 onValueChange = {
-                    ean = it
-                    viewModel.onEanChange(it)
+                    if (it.length <= 13 && it.all(Char::isDigit)) {
+                        ean = it
+                    }
                 },
                 label = {
                     Text("EAN")
@@ -117,6 +111,11 @@ fun CreateItemScreen(
                 supportingText = {
                     Text("${ean.length}/13")
                 },
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType =
+                            KeyboardType.Number
+                    ),
                 isError = ean.isNotEmpty() && ean.length != 13
             )
             Text(
@@ -127,26 +126,17 @@ fun CreateItemScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (state.storageLocations.isEmpty()) {
-
-                Text(
-                    "No warehouses assigned.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
+                Text("No warehouses assigned.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-
                 state.storageLocations.forEach { storage ->
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Text(
                             text = "${storage.warehouseCode} - ${storage.warehouseName}",
                             modifier = Modifier.weight(1f)
                         )
-
                         IconButton(
                             onClick = {
                                 viewModel.decreaseStorage(
@@ -158,23 +148,25 @@ fun CreateItemScreen(
                         }
 
                         OutlinedTextField(
-
                             value = storage.count.toString(),
 
                             onValueChange = { value ->
-
-                                if (
-                                    value.isNotEmpty() &&
-                                    value.all { it.isDigit() }
-                                ) {
-
+                                if (value.isEmpty()) {
                                     viewModel.setStorageCount(
                                         storage.warehouseId,
-                                        value.toInt()
+                                        0
                                     )
+                                } else {
+                                    val number = value.toIntOrNull()
+                                    if (number != null && number >= 0) {
+                                        viewModel.setStorageCount(
+                                            storage.warehouseId,
+                                            number
+                                        )
+                                    }
                                 }
                             },
-
+                            shape = RoundedCornerShape(24.dp),
                             singleLine = true,
 
                             keyboardOptions =
@@ -183,15 +175,9 @@ fun CreateItemScreen(
                                         KeyboardType.Number
                                 ),
 
-                            modifier =
-                                Modifier.width(80.dp),
-
-                            textStyle =
-                                LocalTextStyle.current.copy(
-                                    textAlign = TextAlign.Center
-                                )
+                            modifier = Modifier.width(80.dp),
+                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center)
                         )
-
                         IconButton(
                             onClick = {
                                 viewModel.increaseStorage(
@@ -202,11 +188,9 @@ fun CreateItemScreen(
                             Text("+")
                         }
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
-
             HorizontalDivider()
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -214,22 +198,15 @@ fun CreateItemScreen(
             var expanded by remember {
                 mutableStateOf(false)
             }
-
             ExposedDropdownMenuBox(
-
                 expanded = expanded,
-
-                onExpandedChange = {
-                    expanded = !expanded
-                }
+                onExpandedChange = { expanded = !expanded }
 
             ) {
-
                 val selectedWarehouse =
                     state.availableWarehouses
                         .firstOrNull {
-                            it.id ==
-                                    state.selectedWarehouseId
+                            it.id == state.selectedWarehouseId
                         }
 
                 OutlinedTextField(
@@ -240,7 +217,7 @@ fun CreateItemScreen(
                     label = { Text("Select Warehouse") },
                     modifier =
                         Modifier
-                            .menuAnchor()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
                             .fillMaxWidth()
                 )
                 ExposedDropdownMenu(
@@ -252,8 +229,7 @@ fun CreateItemScreen(
                     state.availableWarehouses
                         .filter { warehouse ->
                             state.storageLocations.none {
-                                it.warehouseId ==
-                                        warehouse.id
+                                it.warehouseId == warehouse.id
                             }
                         }
                         .forEach { warehouse ->
@@ -303,20 +279,26 @@ fun CreateItemScreen(
                                 AsyncImage(
                                     model = imageUri,
                                     contentDescription = null,
-                                    modifier = Modifier.size(72.dp)
+                                    modifier = Modifier.size(72.dp),
+                                    contentScale = ContentScale.Crop
                                 )
                             }
-                            Text(
-                                text = "✕",
-                                color = Color.White,
+                            Surface(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .background(MaterialTheme.colorScheme.error)
                                     .clickable {
                                         viewModel.removeImage(imageUri)
-                                    }
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                                    },
+                                color = MaterialTheme.colorScheme.error,
+                                shape = RoundedCornerShape(bottomStart = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Delete image",
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(4.dp)
+                                )
+                            }
                         }
                     }
                 }

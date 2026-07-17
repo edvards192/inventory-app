@@ -1,7 +1,6 @@
 package com.example.app.viewmodel
 
 import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.app.data.repository.ItemRepository
@@ -12,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.example.app.domain.model.Storage
 import com.example.app.domain.model.Warehouse
+import androidx.core.net.toUri
 
 data class CreateItemState(
     val title: String = "",
@@ -27,18 +27,14 @@ data class CreateItemState(
 class CreateItemViewModel : ViewModel() {
 
     private val repository = ItemRepository()
-
     private val _state = MutableStateFlow(CreateItemState())
     val state: StateFlow<CreateItemState> = _state
-
     fun onTitleChange(value: String) {
         _state.value = _state.value.copy(title = value)
     }
-
     fun onEanChange(value: String) {
         _state.value = _state.value.copy(ean = value)
     }
-
     fun createItem(context: Context, ean: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
@@ -59,7 +55,7 @@ class CreateItemViewModel : ViewModel() {
                         val file =
                             uriToCompressedFile(
                                 context,
-                                Uri.parse(uriString)
+                                uriString.toUri()
                             )
                         val success =
                             repository.uploadImage(
@@ -73,7 +69,6 @@ class CreateItemViewModel : ViewModel() {
                                     isLoading = false,
                                     error = "Failed to upload image."
                                 )
-
                             return@launch
                         }
                     }
@@ -103,6 +98,7 @@ class CreateItemViewModel : ViewModel() {
             try {
                 _state.value = _state.value.copy(availableWarehouses = repository.getWarehouses())
             } catch (e: Exception) {
+                e.printStackTrace()
                 _state.value = _state.value.copy(error = "Cannot connect to server.")
             }
         }
@@ -173,24 +169,17 @@ class CreateItemViewModel : ViewModel() {
     }
     fun setStorageCount(warehouseId: Int, count: Int) {
         val updated =
-            _state.value.storageLocations
-                .mapNotNull { storage ->
-                    if (storage.warehouseId != warehouseId) {
-                        storage
-                    } else {
-                        if (count <= 0) {
-                            null
-                        } else {
-                            storage.copy(
-                                count = count
-                            )
-                        }
-                    }
+            _state.value.storageLocations.map { storage ->
+                if (storage.warehouseId == warehouseId) {
+                    storage.copy(count = count)
+                } else {
+                    storage
                 }
-        _state.value =
-            _state.value.copy(
-                storageLocations = updated
-            )
+            }
+
+        _state.value = _state.value.copy(
+            storageLocations = updated
+        )
     }
     fun addImage(uri: String) {
 

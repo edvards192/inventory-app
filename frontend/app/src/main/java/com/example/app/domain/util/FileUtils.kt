@@ -72,6 +72,5 @@ fun uriToCompressedFile(context: Context, uri: Uri): File {
             scaledBitmap.recycle()
         }
     }
-
     return file
 }

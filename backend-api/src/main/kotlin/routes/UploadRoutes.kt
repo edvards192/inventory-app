@@ -21,7 +21,7 @@ fun Route.uploadRoutes() {
     post("/items/{id}/image") {
         call.application.log.info("Image upload route hit: ${call.request.httpMethod.value} ${call.request.uri}")
 
-        // 1. Parse item ID
+        // Parse item ID
         val itemId = call.parameters["id"]?.toIntOrNull()
         call.application.log.info("Parsed upload itemId=$itemId")
 
@@ -36,50 +36,40 @@ fun Route.uploadRoutes() {
             return@post
         }
 
-        // 2. Receive multipart data
+        // Receive multipart data
         val multipart = call.receiveMultipart()
 
         var uploadedUrl: String? = null
         var sortOrder = 0
 
-        // 3. Process file parts
+        // Process file parts
         multipart.forEachPart { part ->
-
                 when (part) {
-
                     is PartData.FormItem -> {
-
                         if (part.name == "sortOrder") {
                             sortOrder = part.value.toIntOrNull() ?: 0
                         }
                     }
-
                     is PartData.FileItem -> {
-
                         val fileName = part.originalFileName ?: "file.jpg"
-
                         call.application.log.info(
                             "Received upload file part: originalFileName=$fileName"
                         )
-
                         val bytes = part
                             .provider()
                             .readRemaining()
                             .readByteArray()
-
                         uploadedUrl = fileStorageService.saveFile(
                             bytes = bytes,
                             originalFileName = fileName
                         )
                     }
-
                     else -> Unit
                 }
-
             part.dispose()
         }
 
-        // 4. Validate upload result
+        // Validate upload result
         if (uploadedUrl == null) {
             call.respond(
                 HttpStatusCode.BadRequest,
@@ -90,8 +80,7 @@ fun Route.uploadRoutes() {
             )
             return@post
         }
-
-        // 5. Save to database
+        // Save to database
         val imageId = try {
             call.application.log.info("Saving image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl, sortOrder = $sortOrder")
 
@@ -101,16 +90,11 @@ fun Route.uploadRoutes() {
                 sortOrder = sortOrder
             )
         } catch (cause: Throwable) {
-            call.application.log.error(
-                "Failed to save image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl",
-                cause
-            )
+            call.application.log.error("Failed to save image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl", cause)
             throw cause
         }
-
         call.application.log.info("Image URL saved to database: imageId=$imageId, itemId=$itemId")
 
-        // 6. Response
         call.respond(
             HttpStatusCode.Created,
             ApiResponse(
@@ -122,10 +106,7 @@ fun Route.uploadRoutes() {
         )
     }
     delete("/images/{id}") {
-
-    val imageId =
-        call.parameters["id"]?.toIntOrNull()
-
+    val imageId = call.parameters["id"]?.toIntOrNull()
     if (imageId == null) {
         call.respond(
             HttpStatusCode.BadRequest,
@@ -137,8 +118,7 @@ fun Route.uploadRoutes() {
         return@delete
     }
 
-    val deleted =
-        repository.deleteImage(imageId)
+    val deleted = repository.deleteImage(imageId)
 
     if (!deleted) {
         call.respond(
@@ -150,12 +130,9 @@ fun Route.uploadRoutes() {
         )
         return@delete
     }
-
     call.respond(
         ApiResponse(
-            data = mapOf(
-                "status" to "deleted"
-            ),
+            data = mapOf("status" to "deleted"),
             error = null
         )
     )

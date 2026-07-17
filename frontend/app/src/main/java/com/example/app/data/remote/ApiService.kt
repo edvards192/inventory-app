@@ -22,7 +22,21 @@ interface ApiService {
     @GET("items")
     suspend fun getItems(
         @Query("search")
-        search: String = ""
+        search: String = "",
+        @Query("sort")
+        sort: String = "updatedDesc",
+        @Query("stockFilter")
+        stockFilter: String = "all",
+        @Query("warehouseIds")
+        warehouseIds: String = "",
+        @Query("minQuantity")
+        minQuantity: Int? = null,
+        @Query("maxQuantity")
+        maxQuantity: Int? = null,
+        @Query("page")
+        page: Int = 1,
+        @Query("limit")
+        limit: Int = 25
     ): ApiResponse<List<ItemResponse>>
 
     @POST("items")

@@ -14,12 +14,27 @@ import java.io.File
 import com.example.app.data.remote.dto.CreateItemImageRequest
 import com.example.app.domain.model.Warehouse
 import com.example.app.domain.model.Storage
-
+import com.example.app.domain.model.StockFilter
 
 class ItemRepository {
-    suspend fun getItems(search: String = ""): List<Item> {
+    suspend fun getItems(search: String = "",
+                         sort: String = "updatedDesc",
+                         stockFilter: StockFilter = StockFilter.ALL,
+                         warehouseIds: List<Int> = emptyList(),
+                         minQuantity: Int? = null,
+                         maxQuantity: Int? = null,
+                         page: Int = 1,
+                         limit: Int = 25
+                         ): List<Item> {
+        val stockFilterString =
+            when (stockFilter) {
+                StockFilter.ALL -> "all"
+                StockFilter.IN_STOCK -> "inStock"
+                StockFilter.OUT_OF_STOCK -> "outOfStock"
+            }
         return RetrofitClient.api
-            .getItems(search)
+            .getItems(search, sort, stockFilterString, warehouseIds.joinToString(","),
+                minQuantity, maxQuantity, page, limit)
             .data
             ?.map {
                 it.toDomain()
@@ -92,7 +107,6 @@ class ItemRepository {
                 sortOrder = sortOrder,
                 file = body
             )
-
             response.error == null
 
         } catch (e: Exception) {
@@ -106,39 +120,23 @@ class ItemRepository {
 
         return response.error == null
     }
-    suspend fun replaceStorage(
-        itemId: Int,
-        storage: List<Storage>
-    ): Boolean {
-
-        val request =
-            ReplaceStorageRequest(
-
+    suspend fun replaceStorage(itemId: Int, storage: List<Storage>): Boolean {
+        val request = ReplaceStorageRequest(
                 storageLocations =
                     storage.map {
-
                         UpdateStorageRequest(
                             warehouseId =
                                 it.warehouseId,
-
                             count =
                                 it.count
                         )
                     }
             )
-
-        val response =
-            RetrofitClient.api.replaceStorage(
-                itemId,
-                request
-            )
-
+        val response = RetrofitClient.api.replaceStorage(itemId, request)
         return response.error == null
     }
     suspend fun getItemByEan(ean: String): Item? {
-        val response =
-            RetrofitClient.api
-                .getItemByEan(ean)
+        val response = RetrofitClient.api.getItemByEan(ean)
         return response.data?.toDomain()
     }
 }

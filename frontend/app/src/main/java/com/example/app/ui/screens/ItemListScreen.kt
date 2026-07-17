@@ -13,7 +13,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.res.Configuration
 import coil.compose.AsyncImage
 import com.example.app.R
@@ -22,12 +21,9 @@ import com.example.app.domain.util.getListImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -38,43 +34,86 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Tune
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemListScreen(
-    viewModel: ItemListViewModel = viewModel(),
+    viewModel: ItemListViewModel,
     onCreateClick: () -> Unit,
     onScanClick: () -> Unit,
-    onItemClick: (Int) -> Unit
+    onItemClick: (Int) -> Unit,
+    onFilterClick: () -> Unit,
 
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = remember(configuration.orientation) {
+        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    }
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
-    val showScrollTop = gridState.firstVisibleItemIndex > 2
-
-    val columnCount = when {
-        configuration.screenWidthDp < 500 -> 2
-        configuration.screenWidthDp < 900 -> 4
-        else -> 5
+    val showScrollTop by remember {
+        derivedStateOf { gridState.firstVisibleItemIndex > 2 }
     }
-    val scrollBehavior = if (isLandscape) {
-        TopAppBarDefaults.enterAlwaysScrollBehavior()
-    } else {
-        TopAppBarDefaults.pinnedScrollBehavior()
+    val shouldLoadMore by remember(
+        state.items,
+        state.hasMore,
+        state.isLoading,
+        state.isLoadingMore
+    ) {
+        derivedStateOf {
+            val lastVisible =
+                gridState.layoutInfo
+                    .visibleItemsInfo
+                    .lastOrNull()
+                    ?.index
+                    ?: 0
+
+                    state.hasMore &&
+                    !state.isLoading &&
+                    !state.isLoadingMore &&
+                    state.items.size >= 25 &&
+                    state.items.isNotEmpty() &&
+
+                    lastVisible >=
+                    maxOf(
+                        0,
+                        state.items.lastIndex - 1
+                    )
+        }
+    }
+    val columnCount = remember(configuration.screenWidthDp) {
+        when {
+            configuration.screenWidthDp < 500 -> 2
+            configuration.screenWidthDp < 900 -> 4
+            else -> 5
+        }
+    }
+    val enterAlwaysScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = if (isLandscape) enterAlwaysScrollBehavior else pinnedScrollBehavior
+    LaunchedEffect(
+        shouldLoadMore
+    ) {
+        if (shouldLoadMore) {
+            viewModel.loadMore()
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
     }
     Scaffold(
-
         floatingActionButton = {
-
             AnimatedVisibility(
                 visible = showScrollTop,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-
                 FloatingActionButton(
                     modifier = Modifier
                         .then(
@@ -87,7 +126,6 @@ fun ItemListScreen(
                     onClick = {
                         coroutineScope.launch {
                             gridState.animateScrollToItem(0)
-
                         }
                     }
                 ) {
@@ -112,19 +150,13 @@ fun ItemListScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
-
-                    IconButton(
-                        onClick = onScanClick
-                    ) {
+                    IconButton(onClick = onScanClick) {
                         Icon(
                             Icons.Default.QrCodeScanner,
                             contentDescription = "Scan"
                         )
                     }
-
-                    IconButton(
-                        onClick = onCreateClick
-                    ) {
+                    IconButton(onClick = onCreateClick) {
                         Icon(
                             Icons.Default.Add,
                             contentDescription = "Add Item"
@@ -140,7 +172,6 @@ fun ItemListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -150,190 +181,169 @@ fun ItemListScreen(
             ) {
                 OutlinedTextField(
                     value = state.searchText,
-
-                    onValueChange = {
-                        viewModel.onSearchChange(it)
-                    },
-
+                    onValueChange = { viewModel.onSearchChange(it) },
                     modifier = Modifier.fillMaxWidth(),
-
                     singleLine = true,
-
                     shape = RoundedCornerShape(32.dp),
-
-                    placeholder = {
-                        Text("Search items...")
-                    },
-
+                    placeholder = { Text("Search items...") },
+                    textStyle = LocalTextStyle.current.copy(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                    ),
                     leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Default.Search, contentDescription = null)
                     },
-
                     trailingIcon = {
-                        if (state.searchText.isNotEmpty()) {
-                            IconButton(
-                                onClick = {
-                                    viewModel.onSearchChange("")
+                        Row {
+                            if (state.searchText.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.onSearchChange("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = null)
                                 }
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Clear"
-                                )
+                            }
+                            IconButton(onClick = onFilterClick) {
+                                Icon(Icons.Default.Tune, contentDescription = "Filters")
                             }
                         }
                     },
-
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor =
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        focusedContainerColor =
-                            MaterialTheme.colorScheme.surfaceVariant
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 )
             }
-
-
-            state.error?.let {
-                Box(
+            state.error?.let { error ->
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(it)
-                }
-            }
-            if (state.items.isEmpty() && !state.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
                     Text(
-                        if (state.searchText.isBlank())
-                            "No items yet."
-                        else
-                            "No results found."
+                        text = error,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
-            } else {
-                PullToRefreshBox(
-
-                    isRefreshing = state.isLoading,
-
-                    onRefresh = {
-                        viewModel.refresh()
-                    }
-
-                ){
-
-
-                    LazyVerticalGrid(
-
-                        state = gridState,
-
-                        columns = GridCells.Fixed(columnCount),
-
+            }
+            when {
+                state.items.isEmpty() && state.isLoading -> {
+                    Box(
                         modifier = Modifier.fillMaxSize(),
-
-                        contentPadding = PaddingValues(4.dp),
-
-                        horizontalArrangement =
-                            Arrangement.spacedBy(4.dp),
-
-                        verticalArrangement =
-                            Arrangement.spacedBy(4.dp)
-
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(state.items) { item ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { onItemClick(item.id) },
+                        CircularProgressIndicator()
+                    }
+                }
+                state.items.isEmpty() && state.error != null -> {
+                }
+                state.items.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (state.searchText.isBlank())
+                                "No items found\nTap + to create an item."
+                            else
+                                "No items match your search."
+                        )
+                    }
+                }
 
-                                //shape = RoundedCornerShape(20.dp),
-
-                                colors = CardDefaults.cardColors(
-                                    containerColor =
-                                        MaterialTheme.colorScheme.surfaceVariant
-                                ),
-
-
+                else -> {
+                    PullToRefreshBox(
+                        isRefreshing = state.isLoading && !state.isLoadingMore,
+                        onRefresh = {
+                            viewModel.refresh()
+                        }
+                    ){
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = GridCells.Fixed(columnCount),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(state.items) { item ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = { onItemClick(item.id) },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    ),
                                 ) {
-
-                                Column {
-
-                                    AsyncImage(
-                                        model = item.getListImage() ?: "",
-                                        contentDescription = null,
-                                        placeholder =
-                                            painterResource(R.drawable.ic_placeholder),
-                                        error =
-                                            painterResource(R.drawable.ic_placeholder),
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(1f)
-                                    )
-                                    /* Box(
-                                         Modifier
-                                             .fillMaxWidth()
-                                             .aspectRatio(1f)
-                                     )*/
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-
-                                        Text(
-                                            text = item.title,
-
-                                            style =
-                                                MaterialTheme.typography.titleMedium,
-
-                                            maxLines = 1
+                                    Column {
+                                        AsyncImage(
+                                            model = item.getListImage(),
+                                            contentDescription = null,
+                                            placeholder = painterResource(R.drawable.ic_placeholder),
+                                            error = painterResource(R.drawable.ic_placeholder),
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .aspectRatio(1f)
                                         )
-
-                                        Text(
-                                            text = item.ean,
-
-                                            style =
-                                                MaterialTheme.typography.bodySmall,
-
-                                            color =
-                                                MaterialTheme.colorScheme.onSurfaceVariant,
-
-                                            maxLines = 1
-                                        )
-
-                                        Spacer(
-                                            modifier = Modifier.height(1.dp)
-                                        )
-
-                                        val stock = remember(item.storageLocations) {
-                                            item.storageLocations.sumOf { it.count }
-                                        }
-
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            shape = RoundedCornerShape(50)
+                                        Column(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             Text(
-                                                text = stock.toString(),
-                                                modifier = Modifier.padding(
-                                                    horizontal = 12.dp,
-                                                    vertical = 6.dp
-                                                ),
-                                                style = MaterialTheme.typography.labelLarge
+                                                text = item.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                maxLines = 1
                                             )
+                                            Text(
+                                                text = item.ean,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1
+                                            )
+                                            Spacer(
+                                                modifier = Modifier.height(1.dp)
+                                            )
+
+                                            val stock = remember(item.storageLocations) {
+                                                item.storageLocations.sumOf { it.count }
+                                            }
+                                            Surface(
+                                                //color = MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(50)
+                                            ) {
+                                                Text(
+                                                    text = "Qty $stock",
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 12.dp,
+                                                        vertical = 6.dp
+                                                    ),
+                                                    style = MaterialTheme.typography.labelLarge
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
+                            if (state.isLoadingMore) {
+                                item(
+                                    span = {
+                                        GridItemSpan(
+                                            columnCount
+                                        )
+                                    }
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                            }
                         }
-
                     }
                 }
             }
