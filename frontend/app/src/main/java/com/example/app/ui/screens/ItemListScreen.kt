@@ -104,9 +104,9 @@ fun ItemListScreen(
             viewModel.loadMore()
         }
     }
-    LaunchedEffect(Unit) {
+    /*LaunchedEffect(Unit) {
         viewModel.refresh()
-    }
+    }*/
     Scaffold(
         floatingActionButton = {
             AnimatedVisibility(

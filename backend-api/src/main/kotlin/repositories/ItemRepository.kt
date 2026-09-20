@@ -30,12 +30,6 @@ class ItemRepository {
 
     private val fileStorageService = FileStorageService()
 
-    fun testConnection(): Int {
-        return transaction {
-            ItemsTable.selectAll().count().toInt()
-        }
-    }
-
     private fun getStorageByItemId(itemId: Int): List<StorageResponse> {
         return StorageTable
             .join(
@@ -343,15 +337,9 @@ class ItemRepository {
                 }
                 .forEach { storage ->
                     StorageTable.insert {
-
-                        it[StorageTable.itemId] =
-                            itemId
-
-                        it[warehouseId] =
-                            storage.warehouseId
-
-                        it[count] =
-                            storage.count
+                        it[StorageTable.itemId] = itemId
+                        it[warehouseId] = storage.warehouseId
+                        it[count] = storage.count
                     }
                 }
                 ItemsTable.update({ ItemsTable.id eq itemId }) {

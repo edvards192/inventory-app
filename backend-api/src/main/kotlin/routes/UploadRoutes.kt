@@ -19,11 +19,11 @@ fun Route.uploadRoutes() {
     val fileStorageService = FileStorageService()
 
     post("/items/{id}/image") {
-        call.application.log.info("Image upload route hit: ${call.request.httpMethod.value} ${call.request.uri}")
+        //call.application.log.info("Image upload route hit: ${call.request.httpMethod.value} ${call.request.uri}")
 
         // Parse item ID
         val itemId = call.parameters["id"]?.toIntOrNull()
-        call.application.log.info("Parsed upload itemId=$itemId")
+        //call.application.log.info("Parsed upload itemId=$itemId")
 
         if (itemId == null) {
             call.respond(
@@ -52,9 +52,7 @@ fun Route.uploadRoutes() {
                     }
                     is PartData.FileItem -> {
                         val fileName = part.originalFileName ?: "file.jpg"
-                        call.application.log.info(
-                            "Received upload file part: originalFileName=$fileName"
-                        )
+                        //call.application.log.info( "Received upload file part: originalFileName=$fileName")
                         val bytes = part
                             .provider()
                             .readRemaining()
@@ -82,7 +80,7 @@ fun Route.uploadRoutes() {
         }
         // Save to database
         val imageId = try {
-            call.application.log.info("Saving image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl, sortOrder = $sortOrder")
+            //call.application.log.info("Saving image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl, sortOrder = $sortOrder")
 
             repository.addImage(
                 itemId = itemId,
@@ -93,7 +91,7 @@ fun Route.uploadRoutes() {
             call.application.log.error("Failed to save image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl", cause)
             throw cause
         }
-        call.application.log.info("Image URL saved to database: imageId=$imageId, itemId=$itemId")
+        //call.application.log.info("Image URL saved to database: imageId=$imageId, itemId=$itemId")
 
         call.respond(
             HttpStatusCode.Created,
