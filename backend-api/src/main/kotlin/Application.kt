@@ -4,6 +4,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.application.*
 import com.example.database.DatabaseFactory
 import io.ktor.serialization.kotlinx.json.*
+import com.example.routes.authRoutes
 import com.example.routes.itemRoutes
 import com.example.routes.uploadRoutes
 import io.ktor.server.routing.*
@@ -34,6 +35,7 @@ fun Application.module() {
     routing {
         itemRoutes()
         uploadRoutes()
+        authRoutes()
         staticFiles("/uploads", File("uploads"))
     }
 }

@@ -38,5 +38,11 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
 
-    implementation("io.ktor:ktor-server-call-logging:2.3.12")
+    implementation(ktorLibs.server.callLogging)
+
+    // BCrypt password hashing
+    implementation("at.favre.lib:bcrypt:0.10.2")
+
+    implementation(ktorLibs.server.auth)
+    implementation(ktorLibs.server.auth.jwt)
 }

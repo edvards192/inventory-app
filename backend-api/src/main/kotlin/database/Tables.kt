@@ -40,3 +40,11 @@ object ItemImagesTable : Table("item_images") {
     val sortOrder = integer("sort_order")
     override val primaryKey = PrimaryKey(id)
 }
+
+object UsersTable : Table("users") {
+    val id = integer("id").autoIncrement()
+    val username = varchar("username", 100)
+    val passwordHash = varchar("password_hash", 255)
+    val role = varchar("role", 20)
+    override val primaryKey = PrimaryKey(id)
+}
