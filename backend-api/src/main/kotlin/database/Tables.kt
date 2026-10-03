@@ -2,6 +2,7 @@ package com.example.database
 
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.javatime.datetime
+import org.jetbrains.exposed.v1.javatime.CurrentDateTime
 
 object ItemsTable : Table("items") {
 
@@ -43,8 +44,12 @@ object ItemImagesTable : Table("item_images") {
 
 object UsersTable : Table("users") {
     val id = integer("id").autoIncrement()
-    val username = varchar("username", 100)
+    val name = varchar("name", 100)
+    val surname = varchar("surname", 100)
+    val email = varchar("email", 255).uniqueIndex()
     val passwordHash = varchar("password_hash", 255)
     val role = varchar("role", 20)
+    val isActive = bool("is_active").default(true)
+    val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
     override val primaryKey = PrimaryKey(id)
 }

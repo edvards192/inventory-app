@@ -6,11 +6,13 @@ import java.util.Date
 
 object JwtConfig {
 
-    private const val SECRET = "temporary-development-secret"
-    private const val ISSUER = "app-backend"
-    private const val AUDIENCE = "app-client"
+    const val SECRET = "temporary-development-secret"
+    const val ISSUER = "inventory-backend"
+    const val AUDIENCE = "inventory-users"
 
     private const val EXPIRATION_TIME = 7L * 24 * 60 * 60 * 1000
+
+    val algorithm = Algorithm.HMAC256(SECRET)
 
     fun generateToken(
         userId: Int,
@@ -24,6 +26,6 @@ object JwtConfig {
             .withExpiresAt(
                 Date(System.currentTimeMillis() + EXPIRATION_TIME)
             )
-            .sign(Algorithm.HMAC256(SECRET))
+            .sign(algorithm)
     }
 }

@@ -1,4 +1,4 @@
-package com.example.models.requests
+package com.example.app.data.remote.dto.auth
 
 import kotlinx.serialization.Serializable
 

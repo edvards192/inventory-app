@@ -83,4 +83,6 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 }

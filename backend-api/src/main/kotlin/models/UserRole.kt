@@ -1,5 +1,7 @@
+package com.example.models
+
 enum class UserRole{
-    CUSTOMER,
+    VIEW,
     EMPLOYEE,
     ADMIN
 }

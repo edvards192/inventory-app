@@ -5,10 +5,12 @@ import io.ktor.server.application.*
 import com.example.database.DatabaseFactory
 import io.ktor.serialization.kotlinx.json.*
 import com.example.routes.authRoutes
+import com.example.routes.adminRoutes
 import com.example.routes.itemRoutes
 import com.example.routes.uploadRoutes
 import io.ktor.server.routing.*
 import com.example.plugins.configureSerialization
+import com.example.plugins.configureAuthentication
 import com.example.plugins.configureStatusPages
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.http.content.*
@@ -31,11 +33,13 @@ fun Application.module() {
 
     configureSerialization()
     configureStatusPages()
+    configureAuthentication()
     
     routing {
         itemRoutes()
         uploadRoutes()
         authRoutes()
+        adminRoutes()
         staticFiles("/uploads", File("uploads"))
     }
 }

@@ -9,6 +9,9 @@ import com.example.app.data.remote.dto.CreateItemRequest
 import com.example.app.data.remote.dto.UpdateItemRequest
 import com.example.app.data.remote.dto.WarehouseResponse
 import com.example.app.data.remote.dto.ReplaceStorageRequest
+import com.example.app.data.remote.dto.auth.AuthResponse
+import com.example.app.data.remote.dto.auth.LoginRequest
+import com.example.app.data.remote.dto.auth.RegisterRequest
 import retrofit2.http.Path
 import retrofit2.http.DELETE
 import retrofit2.http.PUT
@@ -89,5 +92,15 @@ interface ApiService {
     suspend fun getItemByEan(
         @Path("ean") ean: String
     ): ApiResponse<ItemResponse>
+
+    @POST("auth/login")
+    suspend fun login(
+        @Body request: LoginRequest
+    ): ApiResponse<AuthResponse>
+
+    @POST("auth/register")
+    suspend fun register(
+        @Body request: RegisterRequest
+    ): ApiResponse<AuthResponse>
 
 }
