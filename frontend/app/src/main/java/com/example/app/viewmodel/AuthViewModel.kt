@@ -11,15 +11,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 
 data class AuthUiState(
     val isLoading: Boolean = false,
     val isAuthenticated: Boolean = false,
     val userId: Int? = null,
     val role: UserRole? = null,
+    val name: String? = null,
+    val surname: String? = null,
+    val email: String? = null,
     val error: String? = null
 )
 
@@ -56,6 +57,9 @@ class AuthViewModel(
                         isAuthenticated = true,
                         userId = auth.id,
                         role = auth.role,
+                        name = auth.name,
+                        surname = auth.surname,
+                        email = auth.email,
                         error = null
                     )
                 } else {
@@ -98,6 +102,9 @@ class AuthViewModel(
                         isAuthenticated = true,
                         userId = auth.id,
                         role = auth.role,
+                        name = auth.name,
+                        surname = auth.surname,
+                        email = auth.email,
                         error = null
                     )
                 } else {
@@ -142,23 +149,19 @@ class AuthViewModel(
 
     private fun observeSession() {
         viewModelScope.launch {
-            combine(
-                authDataStore.token,
-                authDataStore.role,
-                authDataStore.userId
-            ) { token, role, userId ->
-                Triple(token, role, userId)
-            }.collect { (token, role, userId) ->
-
+            authDataStore.session.collect { session ->
                 if (
-                    token != null &&
-                    role != null &&
-                    userId != null
+                    session.token != null &&
+                    session.role != null &&
+                    session.userId != null
                 ) {
                     _state.value = _state.value.copy(
                         isAuthenticated = true,
-                        userId = userId,
-                        role = UserRole.valueOf(role)
+                        userId = session.userId,
+                        role = UserRole.valueOf(session.role),
+                        name = session.name,
+                        surname = session.surname,
+                        email = session.email
                     )
                 } else {
                     _state.value = AuthUiState()

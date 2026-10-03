@@ -27,7 +27,10 @@ class AuthRepository(
             authDataStore.saveSession(
                 token = auth.token,
                 role = auth.role.name,
-                userId = auth.id
+                userId = auth.id,
+                name = auth.name,
+                surname = auth.surname,
+                email = auth.email
             )
         }
 
@@ -54,7 +57,10 @@ class AuthRepository(
             authDataStore.saveSession(
                 token = auth.token,
                 role = auth.role.name,
-                userId = auth.id
+                userId = auth.id,
+                name = auth.name,
+                surname = auth.surname,
+                email = auth.email
             )
         }
 

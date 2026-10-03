@@ -16,6 +16,7 @@ import com.example.app.ui.screens.FilterScreen
 import com.example.app.ui.screens.ItemDetailScreen
 import com.example.app.ui.screens.ItemListScreen
 import com.example.app.ui.screens.LoginScreen
+import com.example.app.ui.screens.ProfileScreen
 import com.example.app.ui.screens.RegisterScreen
 import com.example.app.ui.screens.ScannerScreen
 import com.example.app.viewmodel.AuthViewModel
@@ -29,6 +30,7 @@ object Routes {
     const val DETAIL = "detail"
     const val SCANNER = "scanner"
     const val FILTERS = "filters"
+    const val PROFILE = "profile"
 }
 
 @Composable
@@ -121,11 +123,32 @@ fun AppNavGraph() {
                     navController.navigate(Routes.FILTERS)
                 },
 
+                onProfileClick = {
+                    navController.navigate(Routes.PROFILE) {
+                        launchSingleTop = true
+                    }
+                },
+
                 onItemClick = { itemId ->
                     navController.navigate(
                         "${Routes.DETAIL}/$itemId"
                     )
                 }
+            )
+        }
+
+        composable(Routes.PROFILE) {
+            ProfileScreen(
+                state = authState,
+                onInventoryClick = {
+                    navController.navigate(Routes.LIST) {
+                        popUpTo(Routes.LIST) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
+                },
+                onLogoutClick = authViewModel::logout
             )
         }
 

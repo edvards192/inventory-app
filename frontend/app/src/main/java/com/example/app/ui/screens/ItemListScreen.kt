@@ -1,5 +1,6 @@
 package com.example.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -8,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -39,6 +39,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import com.example.app.ui.navigation.AppBottomNavigation
+import com.example.app.ui.navigation.MainDestination
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +50,7 @@ fun ItemListScreen(
     onScanClick: () -> Unit,
     onItemClick: (Int) -> Unit,
     onFilterClick: () -> Unit,
+    onProfileClick: () -> Unit,
 
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -94,9 +97,6 @@ fun ItemListScreen(
             else -> 5
         }
     }
-    val enterAlwaysScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val scrollBehavior = if (isLandscape) enterAlwaysScrollBehavior else pinnedScrollBehavior
     LaunchedEffect(
         shouldLoadMore
     ) {
@@ -108,6 +108,7 @@ fun ItemListScreen(
         viewModel.refresh()
     }*/
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             AnimatedVisibility(
                 visible = showScrollTop,
@@ -115,13 +116,9 @@ fun ItemListScreen(
                 exit = fadeOut()
             ) {
                 FloatingActionButton(
-                    modifier = Modifier
-                        .then(
-                            if (isLandscape)
-                                Modifier.navigationBarsPadding()
-                            else
-                                Modifier
-                        ),
+                    modifier = Modifier.then(
+                        if (isLandscape) Modifier.navigationBarsPadding() else Modifier
+                    ),
                     shape = CircleShape,
                     onClick = {
                         coroutineScope.launch {
@@ -136,143 +133,189 @@ fun ItemListScreen(
                 }
             }
         },
-        modifier = if (isLandscape) {
-            Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-        } else {
-            Modifier
-        },
-        topBar = {
-            TopAppBar(
-                title = { Text("Inventory") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF04318C),
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = onScanClick) {
-                        Icon(
-                            Icons.Default.QrCodeScanner,
-                            contentDescription = "Scan"
-                        )
-                    }
-                    IconButton(onClick = onCreateClick) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Add Item"
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior
+        bottomBar = {
+            AppBottomNavigation(
+                selectedDestination = MainDestination.INVENTORY,
+                onInventoryClick = {},
+                onProfileClick = onProfileClick
             )
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(bottom = padding.calculateBottomPadding())
         ) {
-            Surface(
+            Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(32.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(Color(0xFF04318C))
+            )
+
+            PullToRefreshBox(
+                isRefreshing = state.isLoading && !state.isLoadingMore,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
-                OutlinedTextField(
-                    value = state.searchText,
-                    onValueChange = { viewModel.onSearchChange(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(32.dp),
-                    placeholder = { Text("Search items...") },
-                    textStyle = LocalTextStyle.current.copy(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                    ),
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        Row {
-                            if (state.searchText.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.onSearchChange("") }) {
-                                    Icon(Icons.Default.Close, contentDescription = null)
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Fixed(columnCount),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    item(
+                        key = "top_bar",
+                        span = { GridItemSpan(columnCount) }
+                    ) {
+                        TopAppBar(
+                            title = { Text("Inventory") },
+                            windowInsets = WindowInsets(0, 0, 0, 0),
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = Color(0xFF04318C),
+                                titleContentColor = Color.White,
+                                actionIconContentColor = Color.White
+                            ),
+                            actions = {
+                                IconButton(onClick = onScanClick) {
+                                    Icon(
+                                        Icons.Default.QrCodeScanner,
+                                        contentDescription = "Scan"
+                                    )
+                                }
+                                IconButton(onClick = onCreateClick) {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = "Add Item"
+                                    )
                                 }
                             }
-                            IconButton(onClick = onFilterClick) {
-                                Icon(Icons.Default.Tune, contentDescription = "Filters")
-                            }
-                        }
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                )
-            }
-            state.error?.let { error ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-            }
-            when {
-                state.items.isEmpty() && state.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                state.items.isEmpty() && state.error != null -> {
-                }
-                state.items.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            if (state.searchText.isBlank())
-                                "No items found\nTap + to create an item."
-                            else
-                                "No items match your search."
                         )
                     }
-                }
 
-                else -> {
-                    PullToRefreshBox(
-                        isRefreshing = state.isLoading && !state.isLoadingMore,
-                        onRefresh = {
-                            viewModel.refresh()
-                        }
-                    ){
-                        LazyVerticalGrid(
-                            state = gridState,
-                            columns = GridCells.Fixed(columnCount),
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                    item(
+                        key = "search",
+                        span = { GridItemSpan(columnCount) }
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(32.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            items(state.items) { item ->
+                            OutlinedTextField(
+                                value = state.searchText,
+                                onValueChange = { viewModel.onSearchChange(it) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(32.dp),
+                                placeholder = { Text("Search items...") },
+                                textStyle = LocalTextStyle.current.copy(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                ),
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = null)
+                                },
+                                trailingIcon = {
+                                    Row {
+                                        if (state.searchText.isNotEmpty()) {
+                                            IconButton(onClick = { viewModel.onSearchChange("") }) {
+                                                Icon(Icons.Default.Close, contentDescription = null)
+                                            }
+                                        }
+                                        IconButton(onClick = onFilterClick) {
+                                            Icon(Icons.Default.Tune, contentDescription = "Filters")
+                                        }
+                                    }
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            )
+                        }
+                    }
+
+                    state.error?.let { error ->
+                        item(
+                            key = "error",
+                            span = { GridItemSpan(columnCount) }
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Text(
+                                    text = error,
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+
+                    when {
+                        state.items.isEmpty() && state.isLoading -> {
+                            item(
+                                key = "loading",
+                                span = { GridItemSpan(columnCount) }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
+
+                        state.items.isEmpty() && state.error != null -> Unit
+
+                        state.items.isEmpty() -> {
+                            item(
+                                key = "empty",
+                                span = { GridItemSpan(columnCount) }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (state.searchText.isBlank()) {
+                                            "No items found\nTap + to create an item."
+                                        } else {
+                                            "No items match your search."
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        else -> {
+                            items(
+                                items = state.items,
+                                key = { it.id }
+                            ) { item ->
                                 Card(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp),
                                     onClick = { onItemClick(item.id) },
                                     colors = CardDefaults.cardColors(
                                         containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    ),
+                                    )
                                 ) {
                                     Column {
                                         AsyncImage(
@@ -300,17 +343,12 @@ fun ItemListScreen(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1
                                             )
-                                            Spacer(
-                                                modifier = Modifier.height(1.dp)
-                                            )
+                                            Spacer(modifier = Modifier.height(1.dp))
 
                                             val stock = remember(item.storageLocations) {
                                                 item.storageLocations.sumOf { it.count }
                                             }
-                                            Surface(
-                                                //color = MaterialTheme.colorScheme.primary,
-                                                shape = RoundedCornerShape(50)
-                                            ) {
+                                            Surface(shape = RoundedCornerShape(50)) {
                                                 Text(
                                                     text = "Qty $stock",
                                                     modifier = Modifier.padding(
@@ -324,19 +362,16 @@ fun ItemListScreen(
                                     }
                                 }
                             }
+
                             if (state.isLoadingMore) {
                                 item(
-                                    span = {
-                                        GridItemSpan(
-                                            columnCount
-                                        )
-                                    }
+                                    key = "loading_more",
+                                    span = { GridItemSpan(columnCount) }
                                 ) {
                                     Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CircularProgressIndicator()

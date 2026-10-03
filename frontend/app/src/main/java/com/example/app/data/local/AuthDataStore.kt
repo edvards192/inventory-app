@@ -19,33 +19,39 @@ class AuthDataStore(
         private val TOKEN_KEY = stringPreferencesKey("token")
         private val ROLE_KEY = stringPreferencesKey("role")
         private val USER_ID_KEY = stringPreferencesKey("user_id")
+        private val NAME_KEY = stringPreferencesKey("name")
+        private val SURNAME_KEY = stringPreferencesKey("surname")
+        private val EMAIL_KEY = stringPreferencesKey("email")
     }
 
     suspend fun saveSession(
         token: String,
         role: String,
-        userId: Int
+        userId: Int,
+        name: String,
+        surname: String,
+        email: String
     ) {
         context.dataStore.edit { preferences ->
             preferences[TOKEN_KEY] = token
             preferences[ROLE_KEY] = role
             preferences[USER_ID_KEY] = userId.toString()
+            preferences[NAME_KEY] = name
+            preferences[SURNAME_KEY] = surname
+            preferences[EMAIL_KEY] = email
         }
     }
 
-    val token: Flow<String?> =
+    val session: Flow<AuthSessionData> =
         context.dataStore.data.map { preferences ->
-            preferences[TOKEN_KEY]
-        }
-
-    val role: Flow<String?> =
-        context.dataStore.data.map { preferences ->
-            preferences[ROLE_KEY]
-        }
-
-    val userId: Flow<Int?> =
-        context.dataStore.data.map { preferences ->
-            preferences[USER_ID_KEY]?.toIntOrNull()
+            AuthSessionData(
+                token = preferences[TOKEN_KEY],
+                role = preferences[ROLE_KEY],
+                userId = preferences[USER_ID_KEY]?.toIntOrNull(),
+                name = preferences[NAME_KEY],
+                surname = preferences[SURNAME_KEY],
+                email = preferences[EMAIL_KEY]
+            )
         }
 
     suspend fun clearSession() {
@@ -53,6 +59,18 @@ class AuthDataStore(
             preferences.remove(TOKEN_KEY)
             preferences.remove(ROLE_KEY)
             preferences.remove(USER_ID_KEY)
+            preferences.remove(NAME_KEY)
+            preferences.remove(SURNAME_KEY)
+            preferences.remove(EMAIL_KEY)
         }
     }
 }
+
+data class AuthSessionData(
+    val token: String?,
+    val role: String?,
+    val userId: Int?,
+    val name: String?,
+    val surname: String?,
+    val email: String?
+)

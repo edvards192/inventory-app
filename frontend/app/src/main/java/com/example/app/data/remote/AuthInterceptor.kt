@@ -13,7 +13,7 @@ class AuthInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
 
         val token = runBlocking {
-            authDataStore.token.first()
+            authDataStore.session.first().token
         }
 
         val request = if (token != null) {
