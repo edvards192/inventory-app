@@ -1,6 +1,7 @@
 package com.example.plugins
 
 import com.example.security.JwtConfig
+import com.example.repositories.UserRepository
 import com.auth0.jwt.JWT
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -28,7 +29,10 @@ fun Application.configureAuthentication() {
                     .getClaim("userId")
                     .asInt()
 
-                if (userId != null) {
+                val user = userId?.let { UserRepository().findById(it) }
+                val role = credential.payload.getClaim("role").asString()
+
+                if (user != null && user.isActive && user.role.name == role) {
                     JWTPrincipal(credential.payload)
                 } else {
                     null

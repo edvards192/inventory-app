@@ -13,6 +13,21 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class UserRepository {
 
+    fun findById(id: Int): User? = transaction {
+        UsersTable.selectAll().where { UsersTable.id eq id }.singleOrNull()?.let { row ->
+            User(
+                id = row[UsersTable.id],
+                name = row[UsersTable.name],
+                surname = row[UsersTable.surname],
+                email = row[UsersTable.email],
+                passwordHash = row[UsersTable.passwordHash],
+                role = UserRole.valueOf(row[UsersTable.role]),
+                isActive = row[UsersTable.isActive],
+                createdAt = row[UsersTable.createdAt]
+            )
+        }
+    }
+
     fun createUser(
         name: String,
         surname: String,

@@ -19,9 +19,35 @@ import okhttp3.MultipartBody
 import retrofit2.http.Part
 import retrofit2.http.Multipart
 import retrofit2.http.Query
+import retrofit2.http.PATCH
+import com.example.app.data.remote.dto.UserResponse
+import com.example.app.data.remote.dto.CreateUserRequest
+import com.example.app.data.remote.dto.UpdateUserRequest
+import com.example.app.data.remote.dto.UpdateUserStatusRequest
 
 
 interface ApiService {
+    @GET("admin/users")
+    suspend fun getUsers(): ApiResponse<List<UserResponse>>
+
+    @POST("admin/users")
+    suspend fun createUser(@Body request: CreateUserRequest): ApiResponse<Map<String, Int>>
+
+    @PUT("admin/users/{id}")
+    suspend fun updateUser(
+        @Path("id") id: Int,
+        @Body request: UpdateUserRequest
+    ): ApiResponse<Map<String, String>>
+
+    @PATCH("admin/users/{id}/status")
+    suspend fun updateUserStatus(
+        @Path("id") id: Int,
+        @Body request: UpdateUserStatusRequest
+    ): ApiResponse<Map<String, String>>
+
+    @DELETE("admin/users/{id}")
+    suspend fun deleteUser(@Path("id") id: Int): ApiResponse<Map<String, String>>
+
     @GET("items")
     suspend fun getItems(
         @Query("search")

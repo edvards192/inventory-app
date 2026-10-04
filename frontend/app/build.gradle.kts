@@ -1,7 +1,23 @@
+import java.net.URI
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
+}
+
+val environment = Properties().apply {
+    load(providers.fileContents(rootProject.layout.projectDirectory.file(".env")).asText.orElse("").get().reader())
+}
+val apiBaseUrl = environment.getProperty("API_BASE_URL")
+    ?.trim()?.removeSurrounding("\"")?.removeSurrounding("'")
+    ?.takeIf { it.isNotBlank() }
+    ?: error("Set API_BASE_URL in frontend/.env. You can copy frontend/.env.example to get started.")
+val apiBaseUri = URI(apiBaseUrl)
+require(apiBaseUri.scheme in listOf("http", "https") && apiBaseUri.host != null &&
+    apiBaseUri.rawQuery == null && apiBaseUri.rawFragment == null) {
+    "API_BASE_URL must be an HTTP or HTTPS base URL without a query or fragment."
 }
 
 android {
@@ -14,6 +30,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.trimEnd('/')}/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,6 +50,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

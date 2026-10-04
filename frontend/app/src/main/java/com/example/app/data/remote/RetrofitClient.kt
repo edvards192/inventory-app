@@ -1,6 +1,7 @@
 package com.example.app.data.remote
 
 import android.content.Context
+import com.example.app.BuildConfig
 import com.example.app.data.local.AuthDataStore
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -10,10 +11,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 object RetrofitClient {
-
-    //private const val BASE_URL = "http://10.0.2.2:8080/"
-    private const val BASE_URL = "http://192.168.101.4:8080/"
-    //private const val BASE_URL = "http://10.160.63.98:8080/"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -46,7 +43,7 @@ object RetrofitClient {
         }
 
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(client)
             .addConverterFactory(
                 json.asConverterFactory(

@@ -1,12 +1,11 @@
 package com.example.app.domain.util
 
+import com.example.app.BuildConfig
 import com.example.app.domain.model.Item
 import com.example.app.domain.model.ItemImage
 
-private const val BASE_URL = "http://10.160.63.98:8080"
-
 fun ItemImage.fullUrl(): String {
-    return "$BASE_URL$url"
+    return "${BuildConfig.API_BASE_URL.trimEnd('/')}/${url.trimStart('/')}"
 }
 
 fun Item.getListImage(): String? {
