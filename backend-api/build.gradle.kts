@@ -37,6 +37,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(libs.h2database.h2)
 
     implementation(ktorLibs.server.callLogging)
 

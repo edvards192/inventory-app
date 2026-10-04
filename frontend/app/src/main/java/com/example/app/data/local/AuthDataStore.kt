@@ -64,6 +64,16 @@ class AuthDataStore(
             preferences.remove(EMAIL_KEY)
         }
     }
+
+    suspend fun updateProfile(userId: Int, name: String, surname: String, email: String) {
+        context.dataStore.edit { preferences ->
+            if (preferences[USER_ID_KEY] == userId.toString()) {
+                preferences[NAME_KEY] = name
+                preferences[SURNAME_KEY] = surname
+                preferences[EMAIL_KEY] = email
+            }
+        }
+    }
 }
 
 data class AuthSessionData(

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.app.data.local.AuthDataStore
 import com.example.app.data.repository.AuthRepository
 import com.example.app.domain.model.UserRole
+import com.example.app.data.remote.dto.UserResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -126,6 +127,12 @@ class AuthViewModel(
         viewModelScope.launch {
             repository.logout()
             _state.value = AuthUiState()
+        }
+    }
+
+    fun updateProfile(user: UserResponse) {
+        viewModelScope.launch {
+            authDataStore.updateProfile(user.id, user.name, user.surname, user.email)
         }
     }
 

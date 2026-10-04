@@ -8,6 +8,7 @@ import com.example.models.UserRole
 import com.example.models.responses.ApiResponse
 import com.example.repositories.UserRepository
 import com.example.security.hasRole
+import com.example.validation.UserValidator
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
@@ -21,6 +22,29 @@ fun Route.adminRoutes() {
     val userRepository = UserRepository()
 
     authenticate("auth-jwt") {
+
+        get("/admin/users") {
+            val principal = call.principal<JWTPrincipal>()
+            if (principal == null || !principal.hasRole(UserRole.ADMIN)) {
+                return@get call.respond(
+                    HttpStatusCode.Forbidden,
+                    ApiResponse<Unit>(error = "Forbidden")
+                )
+            }
+
+            val users = userRepository.getAllUsers().sortedBy { it.id }.map { user ->
+                UserResponse(
+                    id = user.id,
+                    name = user.name,
+                    surname = user.surname,
+                    email = user.email,
+                    role = user.role,
+                    isActive = user.isActive,
+                    createdAt = user.createdAt.toString()
+                )
+            }
+            call.respond(ApiResponse(data = users))
+        }
 
         post("/admin/users") {
 
@@ -37,7 +61,11 @@ fun Route.adminRoutes() {
                 )
             }
 
-            val request = call.receive<CreateUserRequest>()
+            val body = call.receive<CreateUserRequest>()
+            val request = body.copy(name = body.name.trim(), surname = body.surname.trim(), email = body.email.trim())
+            UserValidator.validate(request.name, request.surname, request.email, request.password)?.let {
+                return@post call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(error = it))
+            }
 
             val existingUser = userRepository.findByEmail(request.email)
 
@@ -83,7 +111,11 @@ fun Route.adminRoutes() {
                     ApiResponse<Unit>(error = "Invalid user id")
                 )
 
-            val request = call.receive<UpdateUserRequest>()
+            val body = call.receive<UpdateUserRequest>()
+            val request = body.copy(name = body.name.trim(), surname = body.surname.trim(), email = body.email.trim())
+            UserValidator.validate(request.name, request.surname, request.email)?.let {
+                return@put call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(error = it))
+            }
 
             val currentUserId = principal.payload
                 .getClaim("userId")

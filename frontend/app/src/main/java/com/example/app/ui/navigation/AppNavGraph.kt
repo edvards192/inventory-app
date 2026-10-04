@@ -21,6 +21,8 @@ import com.example.app.ui.screens.RegisterScreen
 import com.example.app.ui.screens.ScannerScreen
 import com.example.app.viewmodel.AuthViewModel
 import com.example.app.viewmodel.ItemListViewModel
+import com.example.app.ui.screens.UserManagementScreen
+import com.example.app.domain.model.UserRole
 
 object Routes {
     const val LOGIN = "login"
@@ -31,6 +33,7 @@ object Routes {
     const val SCANNER = "scanner"
     const val FILTERS = "filters"
     const val PROFILE = "profile"
+    const val USERS = "users"
 }
 
 @Composable
@@ -148,8 +151,21 @@ fun AppNavGraph() {
                         launchSingleTop = true
                     }
                 },
-                onLogoutClick = authViewModel::logout
+                onLogoutClick = authViewModel::logout,
+                onManageUsersClick = { navController.navigate(Routes.USERS) }
             )
+        }
+
+        composable(Routes.USERS) {
+            if (authState.isAuthenticated && authState.role == UserRole.ADMIN && authState.userId != null) {
+                UserManagementScreen(
+                    currentUserId = authState.userId!!,
+                    onBack = { navController.popBackStack() },
+                    onUserUpdated = authViewModel::updateProfile
+                )
+            } else {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            }
         }
 
         composable(Routes.FILTERS) {
