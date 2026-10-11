@@ -1,5 +1,6 @@
 package com.example.database
 
+import com.example.models.ReorderStatus
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.javatime.datetime
 import org.jetbrains.exposed.v1.javatime.CurrentDateTime
@@ -9,8 +10,12 @@ object ItemsTable : Table("items") {
     val id = integer("id").autoIncrement()
     val title = varchar("title", 255)
     val ean = char("ean", 13)
+    val description = text("description").nullable()
+    val price = decimal("price", precision = 10, scale = 2).nullable()
+    val reorderPoint = integer("reorder_point").default(0)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -39,6 +44,21 @@ object ItemImagesTable : Table("item_images") {
     val itemId = integer("item_id") references ItemsTable.id
     val url = text("url")
     val sortOrder = integer("sort_order")
+    override val primaryKey = PrimaryKey(id)
+}
+
+object ReordersTable : Table("reorders") {
+
+    val id = integer("id").autoIncrement()
+    val itemId = integer("item_id")
+        .references(ItemsTable.id)
+    val quantity = integer("quantity")
+    val status = enumerationByName("status", 20, ReorderStatus::class)
+        .default(ReorderStatus.WAITING)
+    val createdAt = datetime("created_at")
+        .defaultExpression(CurrentDateTime)
+    val completedAt = datetime("completed_at").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 

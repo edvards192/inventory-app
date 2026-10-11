@@ -21,6 +21,9 @@ data class ItemDetailState(
     val isEditing: Boolean = false,
     val editTitle: String = "",
     val editEan: String = "",
+    val editDescription: String = "",
+    val editPrice: String = "",
+    val editReorderPoint: String = "0",
     val editStorageLocations: List<Storage> = emptyList(),
     val availableWarehouses: List<Warehouse> = emptyList(),
     val selectedWarehouseId: Int? = null
@@ -51,6 +54,9 @@ class ItemDetailViewModel : ViewModel() {
             val wasEditing = _state.value.isEditing
             val currentTitle = _state.value.editTitle
             val currentEan = _state.value.editEan
+            val currentDescription = _state.value.editDescription
+            val currentPrice = _state.value.editPrice
+            val currentReorderPoint = _state.value.editReorderPoint
             val currentStorage = _state.value.editStorageLocations
             val currentWarehouses = _state.value.availableWarehouses
             val currentSelection = _state.value.selectedWarehouseId
@@ -67,6 +73,9 @@ class ItemDetailViewModel : ViewModel() {
                     isEditing = wasEditing,
                     editTitle = if (wasEditing) currentTitle else item.title,
                     editEan = if (wasEditing) currentEan else item.ean,
+                    editDescription = if (wasEditing) currentDescription else item.description.orEmpty(),
+                    editPrice = if (wasEditing) currentPrice else item.price?.toString().orEmpty(),
+                    editReorderPoint = if (wasEditing) currentReorderPoint else item.reorderPoint.toString(),
                     editStorageLocations = if (wasEditing) currentStorage else item.storageLocations,
                     availableWarehouses = currentWarehouses,
                     selectedWarehouseId = currentSelection
@@ -105,6 +114,9 @@ class ItemDetailViewModel : ViewModel() {
             isEditing = true,
             editTitle = current.title,
             editEan = current.ean,
+            editDescription = current.description.orEmpty(),
+            editPrice = current.price?.toString().orEmpty(),
+            editReorderPoint = current.reorderPoint.toString(),
             editStorageLocations = current.storageLocations
         )
         loadWarehouses()
@@ -123,6 +135,15 @@ class ItemDetailViewModel : ViewModel() {
     fun onEanChange(value: String) {
         _state.value = _state.value.copy(editEan = value)
     }
+    fun onDescriptionChange(value: String) {
+        _state.value = _state.value.copy(editDescription = value)
+    }
+    fun onPriceChange(value: String) {
+        _state.value = _state.value.copy(editPrice = value)
+    }
+    fun onReorderPointChange(value: String) {
+        _state.value = _state.value.copy(editReorderPoint = value)
+    }
     fun updateItem(id: Int, onSuccess: () -> Unit) {
 
         viewModelScope.launch {
@@ -134,7 +155,12 @@ class ItemDetailViewModel : ViewModel() {
                     Item(
                         id = id,
                         title = _state.value.editTitle,
-                        ean = _state.value.editEan
+                        ean = _state.value.editEan,
+                        description = _state.value.editDescription
+                            .trim()
+                            .takeIf { it.isNotEmpty() },
+                        price = _state.value.editPrice.toDoubleOrNull(),
+                        reorderPoint = _state.value.editReorderPoint.toIntOrNull() ?: 0
                     )
                 )
                 if (!itemSuccess) {

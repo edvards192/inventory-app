@@ -11,6 +11,9 @@ fun ItemResponse.toDomain() = Item(
     id = id,
     title = title,
     ean = ean,
+    description = description,
+    price = price,
+    reorderPoint = reorderPoint,
     storageLocations =
         storageLocations.map {
             Storage(

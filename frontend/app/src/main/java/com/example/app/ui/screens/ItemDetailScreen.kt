@@ -196,6 +196,11 @@ fun ItemDetailScreen(
                         if (!state.isEditing) {
                             Text(text = item.title, style = MaterialTheme.typography.headlineSmall)
                             Text("EAN: ${item.ean}")
+                            item.description
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { Text(it) }
+                            Text("Price: ${item.price?.let { "%.2f".format(it) } ?: "Not set"}")
+                            Text("Reorder point: ${item.reorderPoint}")
                             Spacer(modifier = Modifier.height(16.dp))
 
                             item.storageLocations.forEach { storage ->
@@ -246,6 +251,41 @@ fun ItemDetailScreen(
                                         keyboardType =
                                             KeyboardType.Number
                                     )
+                            )
+                            OutlinedTextField(
+                                value = state.editDescription,
+                                onValueChange = viewModel::onDescriptionChange,
+                                label = { Text("Description") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(24.dp),
+                                minLines = 3
+                            )
+                            OutlinedTextField(
+                                value = state.editPrice,
+                                onValueChange = { value ->
+                                    val normalized = value.replace(',', '.')
+                                    if (normalized.matches(Regex("""\d{0,8}(\.\d{0,2})?"""))) {
+                                        viewModel.onPriceChange(normalized)
+                                    }
+                                },
+                                label = { Text("Price") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(24.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                            )
+                            OutlinedTextField(
+                                value = state.editReorderPoint,
+                                onValueChange = { value ->
+                                    if (value.length <= 10 && value.all(Char::isDigit)) {
+                                        viewModel.onReorderPointChange(value)
+                                    }
+                                },
+                                label = { Text("Reorder point") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(24.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                             )
                             Text("Storage", style = MaterialTheme.typography.titleMedium)
 
@@ -444,6 +484,9 @@ fun ItemDetailScreen(
                                         state.editTitle.isNotBlank()
                                         && (state.editEan.isEmpty()
                                         || state.editEan.length == 13)
+                                        && (state.editPrice.isBlank()
+                                        || state.editPrice.toDoubleOrNull() != null)
+                                        && state.editReorderPoint.toIntOrNull() != null
 
                                 ) {
                                     Text("Save")

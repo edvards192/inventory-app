@@ -16,6 +16,9 @@ import androidx.core.net.toUri
 data class CreateItemState(
     val title: String = "",
     val ean: String = "",
+    val description: String = "",
+    val price: String = "",
+    val reorderPoint: String = "0",
     val imageUris: List<String> = emptyList(),
     val storageLocations: List<Storage> = emptyList(),
     val availableWarehouses: List<Warehouse> = emptyList(),
@@ -35,13 +38,31 @@ class CreateItemViewModel : ViewModel() {
     fun onEanChange(value: String) {
         _state.value = _state.value.copy(ean = value)
     }
+    fun onDescriptionChange(value: String) {
+        _state.value = _state.value.copy(description = value)
+    }
+    fun onPriceChange(value: String) {
+        _state.value = _state.value.copy(price = value)
+    }
+    fun onReorderPointChange(value: String) {
+        _state.value = _state.value.copy(reorderPoint = value)
+    }
     fun createItem(context: Context, ean: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(isLoading = true, error = null)
                 val result = repository.createItem(
-                    Item(id = 0, title = _state.value.title, ean = ean)
+                    Item(
+                        id = 0,
+                        title = _state.value.title,
+                        ean = ean,
+                        description = _state.value.description
+                            .trim()
+                            .takeIf { it.isNotEmpty() },
+                        price = _state.value.price.toDoubleOrNull(),
+                        reorderPoint = _state.value.reorderPoint.toIntOrNull() ?: 0
                     )
+                )
                 if (!result.success || result.itemId == null) {
                     _state.value =
                         _state.value.copy(

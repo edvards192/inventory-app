@@ -118,6 +118,41 @@ fun CreateItemScreen(
                     ),
                 isError = ean.isNotEmpty() && ean.length != 13
             )
+            OutlinedTextField(
+                value = state.description,
+                onValueChange = viewModel::onDescriptionChange,
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                minLines = 3
+            )
+            OutlinedTextField(
+                value = state.price,
+                onValueChange = { value ->
+                    val normalized = value.replace(',', '.')
+                    if (normalized.matches(Regex("""\d{0,8}(\.\d{0,2})?"""))) {
+                        viewModel.onPriceChange(normalized)
+                    }
+                },
+                label = { Text("Price") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+            OutlinedTextField(
+                value = state.reorderPoint,
+                onValueChange = { value ->
+                    if (value.length <= 10 && value.all(Char::isDigit)) {
+                        viewModel.onReorderPointChange(value)
+                    }
+                },
+                label = { Text("Reorder point") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
             Text(
                 "Storage",
                 style = MaterialTheme.typography.titleMedium
@@ -325,7 +360,12 @@ fun CreateItemScreen(
                         }
                     )
                 },
-                enabled = !state.isLoading && state.title.isNotBlank() && ean.length == 13,
+                enabled =
+                    !state.isLoading &&
+                    state.title.isNotBlank() &&
+                    ean.length == 13 &&
+                    (state.price.isBlank() || state.price.toDoubleOrNull() != null) &&
+                    state.reorderPoint.toIntOrNull() != null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(

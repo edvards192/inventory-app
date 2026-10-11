@@ -24,6 +24,7 @@ import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import java.time.LocalDateTime
 import org.jetbrains.exposed.v1.core.SortOrder
+import java.math.BigDecimal
 
 
 class ItemRepository {
@@ -86,6 +87,9 @@ class ItemRepository {
                     id = id,
                     title = row[ItemsTable.title],
                     ean = row[ItemsTable.ean],
+                    description = row[ItemsTable.description],
+                    price = row[ItemsTable.price]?.toDouble(),
+                    reorderPoint = row[ItemsTable.reorderPoint],
                     createdAt = row[ItemsTable.createdAt].toString(),
                     updatedAt = row[ItemsTable.updatedAt].toString(),
                     storageLocations = getStorageByItemId(id),
@@ -105,6 +109,8 @@ class ItemRepository {
                         total > 0
                     "outOfStock" ->
                         total == 0
+                    "lowStock" ->
+                        total <= item.reorderPoint
                     else ->
                         true
                 }
@@ -141,6 +147,9 @@ class ItemRepository {
                         id = row[ItemsTable.id],
                         title = row[ItemsTable.title],
                         ean = row[ItemsTable.ean],
+                        description = row[ItemsTable.description],
+                        price = row[ItemsTable.price]?.toDouble(),
+                        reorderPoint = row[ItemsTable.reorderPoint],
                         createdAt = row[ItemsTable.createdAt].toString(),
                         updatedAt = row[ItemsTable.updatedAt].toString(),
                         storageLocations = getStorageByItemId(id),
@@ -165,6 +174,9 @@ class ItemRepository {
                         id = id,
                         title = row[ItemsTable.title],
                         ean = row[ItemsTable.ean],
+                        description = row[ItemsTable.description],
+                        price = row[ItemsTable.price]?.toDouble(),
+                        reorderPoint = row[ItemsTable.reorderPoint],
                         createdAt = row[ItemsTable.createdAt].toString(),
                         updatedAt = row[ItemsTable.updatedAt].toString(),
                         storageLocations = getStorageByItemId(id),
@@ -180,6 +192,9 @@ class ItemRepository {
 
                 row[ItemsTable.title] = request.title
                 row[ItemsTable.ean] = request.ean
+                row[ItemsTable.description] = request.description
+                row[ItemsTable.price] = request.price?.let { BigDecimal.valueOf(it) }
+                row[ItemsTable.reorderPoint] = request.reorderPoint
                 row[ItemsTable.createdAt] = LocalDateTime.now()
                 row[ItemsTable.updatedAt] = LocalDateTime.now()
             }[ItemsTable.id]
@@ -193,6 +208,9 @@ class ItemRepository {
 
                 row[ItemsTable.title] = request.title
                 row[ItemsTable.ean] = request.ean
+                row[ItemsTable.description] = request.description
+                row[ItemsTable.price] = request.price?.let { BigDecimal.valueOf(it) }
+                row[ItemsTable.reorderPoint] = request.reorderPoint
                 row[ItemsTable.updatedAt] = LocalDateTime.now()
             }
 

@@ -343,6 +343,14 @@ fun ItemListScreen(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1
                                             )
+                                            item.price?.let { price ->
+                                                Text(
+                                                    text = "Price: ${"%.2f".format(price)}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1
+                                                )
+                                            }
                                             Spacer(modifier = Modifier.height(1.dp))
 
                                             val stock = remember(item.storageLocations) {

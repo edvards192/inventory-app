@@ -31,6 +31,7 @@ class ItemRepository {
                 StockFilter.ALL -> "all"
                 StockFilter.IN_STOCK -> "inStock"
                 StockFilter.OUT_OF_STOCK -> "outOfStock"
+                StockFilter.LOW_STOCK -> "lowStock"
             }
         return RetrofitClient.api
             .getItems(search, sort, stockFilterString, warehouseIds.joinToString(","),
@@ -53,6 +54,9 @@ class ItemRepository {
         val request = CreateItemRequest(
             title = item.title,
             ean = item.ean,
+            description = item.description,
+            price = item.price,
+            reorderPoint = item.reorderPoint,
             images = item.images.map {
                 CreateItemImageRequest(
                     url = it.url,
@@ -82,7 +86,10 @@ class ItemRepository {
 
         val request = UpdateItemRequest(
             title = item.title,
-            ean = item.ean
+            ean = item.ean,
+            description = item.description,
+            price = item.price,
+            reorderPoint = item.reorderPoint
         )
 
         val response = RetrofitClient.api.updateItem(id, request)

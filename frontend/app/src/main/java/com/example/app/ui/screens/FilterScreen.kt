@@ -147,7 +147,8 @@ fun FilterScreen(
             listOf(
                 StockFilter.ALL to "All",
                 StockFilter.IN_STOCK to "In stock",
-                StockFilter.OUT_OF_STOCK to "Out of stock"
+                StockFilter.OUT_OF_STOCK to "Out of stock",
+                StockFilter.LOW_STOCK to "Low stock"
             ).forEach {
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
