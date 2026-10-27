@@ -68,8 +68,6 @@ object UsersTable : Table("users") {
     val surname = varchar("surname", 100)
     val email = varchar("email", 255).uniqueIndex()
     val passwordHash = varchar("password_hash", 255)
-    val role = varchar("role", 20)
-    val isActive = bool("is_active").default(true)
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
     override val primaryKey = PrimaryKey(id)
 }

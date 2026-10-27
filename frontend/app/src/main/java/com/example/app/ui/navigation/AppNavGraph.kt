@@ -17,23 +17,18 @@ import com.example.app.ui.screens.ItemDetailScreen
 import com.example.app.ui.screens.ItemListScreen
 import com.example.app.ui.screens.LoginScreen
 import com.example.app.ui.screens.ProfileScreen
-import com.example.app.ui.screens.RegisterScreen
 import com.example.app.ui.screens.ScannerScreen
 import com.example.app.viewmodel.AuthViewModel
 import com.example.app.viewmodel.ItemListViewModel
-import com.example.app.ui.screens.UserManagementScreen
-import com.example.app.domain.model.UserRole
 
 object Routes {
     const val LOGIN = "login"
-    const val REGISTER = "register"
     const val LIST = "list"
     const val CREATE = "create"
     const val DETAIL = "detail"
     const val SCANNER = "scanner"
     const val FILTERS = "filters"
     const val PROFILE = "profile"
-    const val USERS = "users"
 }
 
 @Composable
@@ -56,10 +51,7 @@ fun AppNavGraph() {
             val currentRoute =
                 navController.currentDestination?.route
 
-            if (
-                currentRoute != Routes.LOGIN &&
-                currentRoute != Routes.REGISTER
-            ) {
+            if (currentRoute != Routes.LOGIN) {
                 navController.navigate(Routes.LOGIN) {
                     popUpTo(0)
                     launchSingleTop = true
@@ -84,27 +76,6 @@ fun AppNavGraph() {
                         }
                         launchSingleTop = true
                     }
-                },
-                onRegisterClick = {
-                    navController.navigate(Routes.REGISTER)
-                }
-            )
-        }
-
-        composable(Routes.REGISTER) {
-
-            RegisterScreen(
-                viewModel = authViewModel,
-                onRegisterSuccess = {
-                    navController.navigate(Routes.LIST) {
-                        popUpTo(Routes.LOGIN) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
-                },
-                onLoginClick = {
-                    navController.popBackStack()
                 }
             )
         }
@@ -151,21 +122,8 @@ fun AppNavGraph() {
                         launchSingleTop = true
                     }
                 },
-                onLogoutClick = authViewModel::logout,
-                onManageUsersClick = { navController.navigate(Routes.USERS) }
+                onLogoutClick = authViewModel::logout
             )
-        }
-
-        composable(Routes.USERS) {
-            if (authState.isAuthenticated && authState.role == UserRole.ADMIN && authState.userId != null) {
-                UserManagementScreen(
-                    currentUserId = authState.userId!!,
-                    onBack = { navController.popBackStack() },
-                    onUserUpdated = authViewModel::updateProfile
-                )
-            } else {
-                LaunchedEffect(Unit) { navController.popBackStack() }
-            }
         }
 
         composable(Routes.FILTERS) {

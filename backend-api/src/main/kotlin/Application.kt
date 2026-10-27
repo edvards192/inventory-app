@@ -5,13 +5,15 @@ import io.ktor.server.application.*
 import com.example.database.DatabaseFactory
 import io.ktor.serialization.kotlinx.json.*
 import com.example.routes.authRoutes
-import com.example.routes.adminRoutes
 import com.example.routes.itemRoutes
 import com.example.routes.uploadRoutes
+import com.example.routes.reorderRoutes
 import io.ktor.server.routing.*
 import com.example.plugins.configureSerialization
 import com.example.plugins.configureAuthentication
 import com.example.plugins.configureStatusPages
+import com.example.repositories.ReorderRepository
+import com.example.services.ReorderProcessor
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.http.content.*
 import java.io.File
@@ -34,12 +36,15 @@ fun Application.module() {
     configureSerialization()
     configureStatusPages()
     configureAuthentication()
-    
+
+    val reorderProcessor = ReorderProcessor(ReorderRepository())
+    reorderProcessor.start(this)
+
     routing {
         itemRoutes()
         uploadRoutes()
         authRoutes()
-        adminRoutes()
+        reorderRoutes(reorderProcessor)
         staticFiles("/uploads", File("uploads"))
     }
 }

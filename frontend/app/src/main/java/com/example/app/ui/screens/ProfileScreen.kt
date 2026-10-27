@@ -37,15 +37,13 @@ import androidx.compose.ui.unit.sp
 import com.example.app.ui.navigation.AppBottomNavigation
 import com.example.app.ui.navigation.MainDestination
 import com.example.app.viewmodel.AuthUiState
-import com.example.app.domain.model.UserRole
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     state: AuthUiState,
     onInventoryClick: () -> Unit,
-    onLogoutClick: () -> Unit,
-    onManageUsersClick: () -> Unit
+    onLogoutClick: () -> Unit
 ) {
     val fullName = listOfNotNull(
         state.name?.takeIf { it.isNotBlank() },
@@ -98,11 +96,6 @@ fun ProfileScreen(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = state.role?.displayName() ?: "Account",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge
-            )
 
             Card(
                 modifier = Modifier
@@ -119,16 +112,6 @@ fun ProfileScreen(
                         label = "Email",
                         value = state.email?.takeIf { it.isNotBlank() } ?: "Not available"
                     )
-                }
-            }
-
-            if (state.role == UserRole.ADMIN) {
-                OutlinedButton(
-                    onClick = onManageUsersClick,
-                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text("Manage users")
                 }
             }
 
@@ -185,6 +168,3 @@ private fun ProfileInfoRow(
         }
     }
 }
-
-private fun Enum<*>.displayName(): String =
-    name.lowercase().replaceFirstChar { it.titlecase() }

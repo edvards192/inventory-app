@@ -30,9 +30,8 @@ fun Application.configureAuthentication() {
                     .asInt()
 
                 val user = userId?.let { UserRepository().findById(it) }
-                val role = credential.payload.getClaim("role").asString()
 
-                if (user != null && user.isActive && user.role.name == role) {
+                if (user != null) {
                     JWTPrincipal(credential.payload)
                 } else {
                     null

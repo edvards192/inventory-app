@@ -17,7 +17,6 @@ class AuthDataStore(
 
     companion object {
         private val TOKEN_KEY = stringPreferencesKey("token")
-        private val ROLE_KEY = stringPreferencesKey("role")
         private val USER_ID_KEY = stringPreferencesKey("user_id")
         private val NAME_KEY = stringPreferencesKey("name")
         private val SURNAME_KEY = stringPreferencesKey("surname")
@@ -26,7 +25,6 @@ class AuthDataStore(
 
     suspend fun saveSession(
         token: String,
-        role: String,
         userId: Int,
         name: String,
         surname: String,
@@ -34,7 +32,6 @@ class AuthDataStore(
     ) {
         context.dataStore.edit { preferences ->
             preferences[TOKEN_KEY] = token
-            preferences[ROLE_KEY] = role
             preferences[USER_ID_KEY] = userId.toString()
             preferences[NAME_KEY] = name
             preferences[SURNAME_KEY] = surname
@@ -46,7 +43,6 @@ class AuthDataStore(
         context.dataStore.data.map { preferences ->
             AuthSessionData(
                 token = preferences[TOKEN_KEY],
-                role = preferences[ROLE_KEY],
                 userId = preferences[USER_ID_KEY]?.toIntOrNull(),
                 name = preferences[NAME_KEY],
                 surname = preferences[SURNAME_KEY],
@@ -57,28 +53,16 @@ class AuthDataStore(
     suspend fun clearSession() {
         context.dataStore.edit { preferences ->
             preferences.remove(TOKEN_KEY)
-            preferences.remove(ROLE_KEY)
             preferences.remove(USER_ID_KEY)
             preferences.remove(NAME_KEY)
             preferences.remove(SURNAME_KEY)
             preferences.remove(EMAIL_KEY)
         }
     }
-
-    suspend fun updateProfile(userId: Int, name: String, surname: String, email: String) {
-        context.dataStore.edit { preferences ->
-            if (preferences[USER_ID_KEY] == userId.toString()) {
-                preferences[NAME_KEY] = name
-                preferences[SURNAME_KEY] = surname
-                preferences[EMAIL_KEY] = email
-            }
-        }
-    }
 }
 
 data class AuthSessionData(
     val token: String?,
-    val role: String?,
     val userId: Int?,
     val name: String?,
     val surname: String?,

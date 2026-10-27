@@ -33,7 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,7 +60,6 @@ import com.example.app.viewmodel.AuthViewModel
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onRegisterClick: () -> Unit,
     viewModel: AuthViewModel = viewModel(
         factory = AuthViewModel.Factory(LocalContext.current)
     )
@@ -270,14 +268,6 @@ fun LoginScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                    }
-
-                    TextButton(
-                        onClick = onRegisterClick,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        enabled = !state.isLoading
-                    ) {
-                        Text("Don't have an account? Register")
                     }
                 }
             }

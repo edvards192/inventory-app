@@ -9,9 +9,11 @@ import com.example.app.data.remote.dto.CreateItemRequest
 import com.example.app.data.remote.dto.UpdateItemRequest
 import com.example.app.data.remote.dto.WarehouseResponse
 import com.example.app.data.remote.dto.ReplaceStorageRequest
+import com.example.app.data.remote.dto.CreateReorderRequest
+import com.example.app.data.remote.dto.ReorderListResponse
+import com.example.app.data.remote.dto.ReorderResponse
 import com.example.app.data.remote.dto.auth.AuthResponse
 import com.example.app.data.remote.dto.auth.LoginRequest
-import com.example.app.data.remote.dto.auth.RegisterRequest
 import retrofit2.http.Path
 import retrofit2.http.DELETE
 import retrofit2.http.PUT
@@ -19,35 +21,9 @@ import okhttp3.MultipartBody
 import retrofit2.http.Part
 import retrofit2.http.Multipart
 import retrofit2.http.Query
-import retrofit2.http.PATCH
-import com.example.app.data.remote.dto.UserResponse
-import com.example.app.data.remote.dto.CreateUserRequest
-import com.example.app.data.remote.dto.UpdateUserRequest
-import com.example.app.data.remote.dto.UpdateUserStatusRequest
 
 
 interface ApiService {
-    @GET("admin/users")
-    suspend fun getUsers(): ApiResponse<List<UserResponse>>
-
-    @POST("admin/users")
-    suspend fun createUser(@Body request: CreateUserRequest): ApiResponse<Map<String, Int>>
-
-    @PUT("admin/users/{id}")
-    suspend fun updateUser(
-        @Path("id") id: Int,
-        @Body request: UpdateUserRequest
-    ): ApiResponse<Map<String, String>>
-
-    @PATCH("admin/users/{id}/status")
-    suspend fun updateUserStatus(
-        @Path("id") id: Int,
-        @Body request: UpdateUserStatusRequest
-    ): ApiResponse<Map<String, String>>
-
-    @DELETE("admin/users/{id}")
-    suspend fun deleteUser(@Path("id") id: Int): ApiResponse<Map<String, String>>
-
     @GET("items")
     suspend fun getItems(
         @Query("search")
@@ -124,9 +100,13 @@ interface ApiService {
         @Body request: LoginRequest
     ): ApiResponse<AuthResponse>
 
-    @POST("auth/register")
-    suspend fun register(
-        @Body request: RegisterRequest
-    ): ApiResponse<AuthResponse>
+    @GET("reorders")
+    suspend fun getReorders():
+            ApiResponse<ReorderListResponse>
+
+    @POST("reorders")
+    suspend fun createReorder(
+        @Body request: CreateReorderRequest
+    ): ApiResponse<ReorderResponse>
 
 }

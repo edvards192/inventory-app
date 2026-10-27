@@ -6,8 +6,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.app.data.local.AuthDataStore
 import com.example.app.data.repository.AuthRepository
-import com.example.app.domain.model.UserRole
-import com.example.app.data.remote.dto.UserResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +16,6 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val isAuthenticated: Boolean = false,
     val userId: Int? = null,
-    val role: UserRole? = null,
     val name: String? = null,
     val surname: String? = null,
     val email: String? = null,
@@ -57,7 +54,6 @@ class AuthViewModel(
                         isLoading = false,
                         isAuthenticated = true,
                         userId = auth.id,
-                        role = auth.role,
                         name = auth.name,
                         surname = auth.surname,
                         email = auth.email,
@@ -78,61 +74,10 @@ class AuthViewModel(
         }
     }
 
-    fun register(
-        name: String,
-        surname: String,
-        email: String,
-        password: String
-    ) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                isLoading = true,
-                error = null
-            )
-            try {
-                val response = repository.register(
-                    name = name,
-                    surname = surname,
-                    email = email,
-                    password = password
-                )
-                val auth = response.data
-                if (auth != null) {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        userId = auth.id,
-                        role = auth.role,
-                        name = auth.name,
-                        surname = auth.surname,
-                        email = auth.email,
-                        error = null
-                    )
-                } else {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        error = response.error ?: "Registration failed"
-                    )
-                }
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Registration failed"
-                )
-            }
-        }
-    }
-
     fun logout() {
         viewModelScope.launch {
             repository.logout()
             _state.value = AuthUiState()
-        }
-    }
-
-    fun updateProfile(user: UserResponse) {
-        viewModelScope.launch {
-            authDataStore.updateProfile(user.id, user.name, user.surname, user.email)
         }
     }
 
@@ -159,13 +104,11 @@ class AuthViewModel(
             authDataStore.session.collect { session ->
                 if (
                     session.token != null &&
-                    session.role != null &&
                     session.userId != null
                 ) {
                     _state.value = _state.value.copy(
                         isAuthenticated = true,
                         userId = session.userId,
-                        role = UserRole.valueOf(session.role),
                         name = session.name,
                         surname = session.surname,
                         email = session.email
