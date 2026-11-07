@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 
 enum class MainDestination {
     INVENTORY,
+    ORDERS,
     PROFILE
 }
 
@@ -33,6 +34,7 @@ enum class MainDestination {
 fun AppBottomNavigation(
     selectedDestination: MainDestination,
     onInventoryClick: () -> Unit,
+    onOrdersClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
     Surface(
@@ -61,9 +63,8 @@ fun AppBottomNavigation(
                         .fillMaxHeight(),
                     icon = Icons.Default.LocalShipping,
                     contentDescription = "Orders",
-                    selected = false,
-                    enabled = false,
-                    onClick = {}
+                    selected = selectedDestination == MainDestination.ORDERS,
+                    onClick = onOrdersClick
                 )
                 NavigationIconButton(
                     modifier = Modifier

@@ -51,6 +51,8 @@ fun ItemDetailScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReorderDialog by remember { mutableStateOf(false) }
+    var reorderQuantity by remember { mutableStateOf("") }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -224,6 +226,22 @@ fun ItemDetailScreen(
                                         .toString(),
                                     style = MaterialTheme.typography.titleMedium
                                 )
+                            }
+                            if (item.storageLocations.sumOf { it.count } <= item.reorderPoint) {
+                                Text(
+                                    text = "Stock is at or below the reorder point.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    reorderQuantity = ""
+                                    showReorderDialog = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Reorder")
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -510,6 +528,60 @@ fun ItemDetailScreen(
                             }
                         }
                     }
+                }
+                if (showReorderDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showReorderDialog = false },
+                        title = { Text(item.title) },
+                        text = {
+                            OutlinedTextField(
+                                value = reorderQuantity,
+                                onValueChange = { value ->
+                                    reorderQuantity = value.filter { it.isDigit() }
+                                },
+                                label = { Text("Quantity") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(24.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number
+                                )
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    viewModel.createReorder(
+                                        itemId = item.id,
+                                        quantity = reorderQuantity.toInt(),
+                                        onSuccess = {
+                                            showReorderDialog = false
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    "Reorder added to the queue."
+                                                )
+                                            }
+                                        },
+                                        onError = {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    "Failed to create reorder."
+                                                )
+                                            }
+                                        }
+                                    )
+                                },
+                                enabled = (reorderQuantity.toIntOrNull() ?: 0) > 0
+                            ) {
+                                Text("Reorder")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showReorderDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
                 }
                 // DELETE DIALOG
                 if (showDeleteDialog) {

@@ -3,6 +3,7 @@ package com.example.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.app.data.repository.ItemRepository
+import com.example.app.data.repository.ReorderRepository
 import com.example.app.domain.model.Item
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +33,7 @@ data class ItemDetailState(
 class ItemDetailViewModel : ViewModel() {
 
     private val repository = ItemRepository()
+    private val reorderRepository = ReorderRepository()
     private val _state = MutableStateFlow(ItemDetailState())
     val state: StateFlow<ItemDetailState> = _state
 
@@ -104,6 +106,26 @@ class ItemDetailViewModel : ViewModel() {
                 _state.value = _state.value.copy(
                     error = "Cannot connect to server."
                 )
+            }
+        }
+    }
+    fun createReorder(
+        itemId: Int,
+        quantity: Int,
+        onSuccess: () -> Unit,
+        onError: () -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val success = reorderRepository.createReorder(itemId, quantity)
+                if (success) {
+                    onSuccess()
+                } else {
+                    onError()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onError()
             }
         }
     }

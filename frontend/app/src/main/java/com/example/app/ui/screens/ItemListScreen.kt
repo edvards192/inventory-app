@@ -51,6 +51,7 @@ fun ItemListScreen(
     onItemClick: (Int) -> Unit,
     onFilterClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onOrdersClick: () -> Unit,
 
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -137,6 +138,7 @@ fun ItemListScreen(
             AppBottomNavigation(
                 selectedDestination = MainDestination.INVENTORY,
                 onInventoryClick = {},
+                onOrdersClick = onOrdersClick,
                 onProfileClick = onProfileClick
             )
         }

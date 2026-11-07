@@ -17,9 +17,11 @@ import com.example.app.ui.screens.ItemDetailScreen
 import com.example.app.ui.screens.ItemListScreen
 import com.example.app.ui.screens.LoginScreen
 import com.example.app.ui.screens.ProfileScreen
+import com.example.app.ui.screens.ReordersScreen
 import com.example.app.ui.screens.ScannerScreen
 import com.example.app.viewmodel.AuthViewModel
 import com.example.app.viewmodel.ItemListViewModel
+import com.example.app.viewmodel.ReordersViewModel
 
 object Routes {
     const val LOGIN = "login"
@@ -29,6 +31,7 @@ object Routes {
     const val SCANNER = "scanner"
     const val FILTERS = "filters"
     const val PROFILE = "profile"
+    const val ORDERS = "orders"
 }
 
 @Composable
@@ -103,6 +106,12 @@ fun AppNavGraph() {
                     }
                 },
 
+                onOrdersClick = {
+                    navController.navigate(Routes.ORDERS) {
+                        launchSingleTop = true
+                    }
+                },
+
                 onItemClick = { itemId ->
                     navController.navigate(
                         "${Routes.DETAIL}/$itemId"
@@ -122,7 +131,39 @@ fun AppNavGraph() {
                         launchSingleTop = true
                     }
                 },
+                onOrdersClick = {
+                    navController.navigate(Routes.ORDERS) {
+                        popUpTo(Routes.LIST) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
+                },
                 onLogoutClick = authViewModel::logout
+            )
+        }
+
+        composable(Routes.ORDERS) {
+            val reordersViewModel: ReordersViewModel = viewModel()
+
+            ReordersScreen(
+                viewModel = reordersViewModel,
+                onInventoryClick = {
+                    navController.navigate(Routes.LIST) {
+                        popUpTo(Routes.LIST) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
+                },
+                onProfileClick = {
+                    navController.navigate(Routes.PROFILE) {
+                        popUpTo(Routes.LIST) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

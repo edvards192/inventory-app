@@ -43,6 +43,7 @@ import com.example.app.viewmodel.AuthUiState
 fun ProfileScreen(
     state: AuthUiState,
     onInventoryClick: () -> Unit,
+    onOrdersClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     val fullName = listOfNotNull(
@@ -64,6 +65,7 @@ fun ProfileScreen(
             AppBottomNavigation(
                 selectedDestination = MainDestination.PROFILE,
                 onInventoryClick = onInventoryClick,
+                onOrdersClick = onOrdersClick,
                 onProfileClick = {}
             )
         }
