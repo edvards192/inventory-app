@@ -2,6 +2,7 @@ package com.example.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.app.data.remote.toUserMessage
 import com.example.app.data.repository.ItemRepository
 import com.example.app.data.repository.ReorderRepository
 import com.example.app.domain.model.Item
@@ -18,6 +19,7 @@ data class ItemDetailState(
     val item: Item? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val actionError: String? = null,
 
     val isEditing: Boolean = false,
     val editTitle: String = "",
@@ -45,8 +47,12 @@ class ItemDetailViewModel : ViewModel() {
                 _state.value = _state.value.copy(availableWarehouses = warehouses)
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(error = "Cannot connect to server.")}
+                _state.value = _state.value.copy(actionError = e.toUserMessage("Failed to load warehouses."))}
         }
+    }
+
+    fun clearActionError() {
+        _state.value = _state.value.copy(actionError = null)
     }
 
     fun loadItem(id: Int, showLoading: Boolean = true) {
@@ -86,7 +92,7 @@ class ItemDetailViewModel : ViewModel() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 _state.value = _state.value.copy(
-                    error = "Cannot connect to server.",
+                    error = e.toUserMessage("Failed to load item."),
                     isLoading = false
                 )
             }
@@ -100,11 +106,13 @@ class ItemDetailViewModel : ViewModel() {
                 val success = repository.deleteItem(id)
                 if (success) {
                     onSuccess()
+                } else {
+                    _state.value = _state.value.copy(actionError = "Failed to delete item.")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _state.value = _state.value.copy(
-                    error = "Cannot connect to server."
+                    actionError = e.toUserMessage("Failed to delete item.")
                 )
             }
         }
@@ -113,7 +121,7 @@ class ItemDetailViewModel : ViewModel() {
         itemId: Int,
         quantity: Int,
         onSuccess: () -> Unit,
-        onError: () -> Unit
+        onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -121,11 +129,11 @@ class ItemDetailViewModel : ViewModel() {
                 if (success) {
                     onSuccess()
                 } else {
-                    onError()
+                    onError("Failed to create reorder.")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                onError()
+                onError(e.toUserMessage("Failed to create reorder."))
             }
         }
     }
@@ -155,7 +163,9 @@ class ItemDetailViewModel : ViewModel() {
     }
 
     fun onEanChange(value: String) {
-        _state.value = _state.value.copy(editEan = value)
+        if (value.length <= 13 && value.all(Char::isDigit)) {
+            _state.value = _state.value.copy(editEan = value)
+        }
     }
     fun onDescriptionChange(value: String) {
         _state.value = _state.value.copy(editDescription = value)
@@ -186,7 +196,7 @@ class ItemDetailViewModel : ViewModel() {
                     )
                 )
                 if (!itemSuccess) {
-                    _state.value = _state.value.copy(error = "Failed to update item.")
+                    _state.value = _state.value.copy(actionError = "Failed to update item.")
                     return@launch
                 }
                 val storageSuccess =
@@ -195,13 +205,13 @@ class ItemDetailViewModel : ViewModel() {
                         storage = _state.value.editStorageLocations
                     )
                 if (!storageSuccess) {
-                    _state.value = _state.value.copy(error = "Failed to update storage.")
+                    _state.value = _state.value.copy(actionError = "Failed to update storage.")
                     return@launch
                 }
                 onSuccess()
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(error = "Cannot connect to server.")
+                _state.value = _state.value.copy(actionError = e.toUserMessage("Failed to update item."))
             }
         }
     }
@@ -211,10 +221,12 @@ class ItemDetailViewModel : ViewModel() {
                 val success = repository.deleteImage(imageId)
                 if (success) {
                     loadItem(itemId, showLoading = false)
+                } else {
+                    _state.value = _state.value.copy(actionError = "Failed to delete image.")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(error = "Cannot connect to server.")
+                _state.value = _state.value.copy(actionError = e.toUserMessage("Failed to delete image."))
             }
         }
     }
@@ -242,10 +254,12 @@ class ItemDetailViewModel : ViewModel() {
                     )
                 if (success) {
                     loadItem(itemId, showLoading = false)
+                } else {
+                    _state.value = _state.value.copy(actionError = "Failed to upload image.")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(error = "Cannot connect to server.")
+                _state.value = _state.value.copy(actionError = e.toUserMessage("Failed to upload image."))
             }
         }
     }

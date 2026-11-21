@@ -53,6 +53,7 @@ fun ItemDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showReorderDialog by remember { mutableStateOf(false) }
     var reorderQuantity by remember { mutableStateOf("") }
+    var isReordering by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -69,6 +70,12 @@ fun ItemDetailScreen(
     val scope = rememberCoroutineScope()
     LaunchedEffect(itemId) {
         viewModel.loadItem(itemId)
+    }
+    LaunchedEffect(state.actionError) {
+        state.actionError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearActionError()
+        }
     }
     Scaffold(
         snackbarHost = {
@@ -500,8 +507,7 @@ fun ItemDetailScreen(
                                     modifier = Modifier.weight(1f),
                                     enabled =
                                         state.editTitle.isNotBlank()
-                                        && (state.editEan.isEmpty()
-                                        || state.editEan.length == 13)
+                                        && state.editEan.length == 13
                                         && (state.editPrice.isBlank()
                                         || state.editPrice.toDoubleOrNull() != null)
                                         && state.editReorderPoint.toIntOrNull() != null
@@ -551,10 +557,12 @@ fun ItemDetailScreen(
                         confirmButton = {
                             TextButton(
                                 onClick = {
+                                    isReordering = true
                                     viewModel.createReorder(
                                         itemId = item.id,
                                         quantity = reorderQuantity.toInt(),
                                         onSuccess = {
+                                            isReordering = false
                                             showReorderDialog = false
                                             scope.launch {
                                                 snackbarHostState.showSnackbar(
@@ -562,16 +570,15 @@ fun ItemDetailScreen(
                                                 )
                                             }
                                         },
-                                        onError = {
+                                        onError = { message ->
+                                            isReordering = false
                                             scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    "Failed to create reorder."
-                                                )
+                                                snackbarHostState.showSnackbar(message)
                                             }
                                         }
                                     )
                                 },
-                                enabled = (reorderQuantity.toIntOrNull() ?: 0) > 0
+                                enabled = !isReordering && (reorderQuantity.toIntOrNull() ?: 0) > 0
                             ) {
                                 Text("Reorder")
                             }

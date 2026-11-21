@@ -2,6 +2,7 @@ package com.example.services
 
 import com.example.queue.FifoQueue
 import com.example.repositories.ReorderRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -22,23 +23,35 @@ class ReorderProcessor(
 
     fun start(scope: CoroutineScope) {
         scope.launch(Dispatchers.IO) {
-            mutex.withLock {
-                repository.getActiveReorderIds().forEach { queue.enqueue(it) }
-            }
+            var restored = false
 
             while (isActive) {
-                val reorderId = mutex.withLock { queue.peek() }
+                try {
+                    if (!restored) {
+                        val activeIds = repository.getActiveReorderIds()
+                        mutex.withLock {
+                            activeIds.forEach { queue.enqueue(it) }
+                        }
+                        restored = true
+                    }
 
-                if (reorderId == null) {
+                    val reorderId = mutex.withLock { queue.peek() }
+
+                    if (reorderId == null) {
+                        delay(idleCheckMs)
+                        continue
+                    }
+
+                    repository.markProcessing(reorderId)
+                    delay(processingTimeMs)
+                    repository.markCompleted(reorderId)
+
+                    mutex.withLock { queue.dequeue() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
                     delay(idleCheckMs)
-                    continue
                 }
-
-                repository.markProcessing(reorderId)
-                delay(processingTimeMs)
-                repository.markCompleted(reorderId)
-
-                mutex.withLock { queue.dequeue() }
             }
         }
     }

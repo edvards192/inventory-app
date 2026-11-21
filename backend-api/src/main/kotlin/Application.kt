@@ -9,6 +9,7 @@ import com.example.routes.itemRoutes
 import com.example.routes.uploadRoutes
 import com.example.routes.reorderRoutes
 import io.ktor.server.routing.*
+import io.ktor.server.auth.*
 import com.example.plugins.configureSerialization
 import com.example.plugins.configureAuthentication
 import com.example.plugins.configureStatusPages
@@ -41,10 +42,12 @@ fun Application.module() {
     reorderProcessor.start(this)
 
     routing {
-        itemRoutes()
-        uploadRoutes()
         authRoutes()
-        reorderRoutes(reorderProcessor)
+        authenticate("auth-jwt") {
+            itemRoutes()
+            uploadRoutes()
+            reorderRoutes(reorderProcessor)
+        }
         staticFiles("/uploads", File("uploads"))
     }
 }

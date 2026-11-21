@@ -23,3 +23,12 @@ suspend fun ApplicationCall.respondNotFoundError(message: String) {
         )
     )
 }
+suspend fun ApplicationCall.respondConflictError(message: String) {
+    respond(
+        HttpStatusCode.Conflict,
+        ApiResponse<Unit>(
+            data = null,
+            error = message
+        )
+    )
+}

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.app.data.local.AuthDataStore
+import com.example.app.data.remote.toUserMessage
 import com.example.app.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,13 +63,13 @@ class AuthViewModel(
                 } else {
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        error = response.error ?: "Login failed"
+                        error = response.error ?: "Login failed."
                     )
                 }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Login failed"
+                    error = e.toUserMessage("Login failed.")
                 )
             }
         }

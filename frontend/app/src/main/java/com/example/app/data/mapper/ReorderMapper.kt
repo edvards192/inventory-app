@@ -13,7 +13,8 @@ fun ReorderResponse.toDomain() = Reorder(
     quantity = quantity,
     status = ReorderStatus.valueOf(status),
     createdAt = createdAt,
-    completedAt = completedAt
+    completedAt = completedAt,
+    createdBy = createdBy
 )
 
 fun ReorderListResponse.toDomain() = ReorderList(

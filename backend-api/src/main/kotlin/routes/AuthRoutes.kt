@@ -29,7 +29,7 @@ fun Route.authRoutes() {
         if (user == null) {
             call.respond(
                 HttpStatusCode.Unauthorized,
-                ApiResponse<Unit>(error = "Invalid email or password")
+                ApiResponse<Unit>(error = "Invalid email or password.")
             )
             return@post
         }
@@ -42,7 +42,7 @@ fun Route.authRoutes() {
         if (!passwordCorrect) {
             call.respond(
                 HttpStatusCode.Unauthorized,
-                ApiResponse<Unit>(error = "Invalid email or password")
+                ApiResponse<Unit>(error = "Invalid email or password.")
             )
             return@post
         }

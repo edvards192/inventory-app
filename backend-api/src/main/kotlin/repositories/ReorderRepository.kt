@@ -2,6 +2,7 @@ package com.example.repositories
 
 import com.example.database.ItemsTable
 import com.example.database.ReordersTable
+import com.example.database.UsersTable
 import com.example.models.ReorderStatus
 import com.example.models.requests.CreateReorderRequest
 import com.example.models.responses.ReorderListResponse
@@ -11,6 +12,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -29,26 +31,26 @@ class ReorderRepository {
         }
     }
 
-    fun createReorder(request: CreateReorderRequest): Int? {
+    fun hasActiveReorderForItem(itemId: Int): Boolean {
         return transaction {
-            if (request.quantity <= 0) {
-                return@transaction null
-            }
-
-            val itemExists = ItemsTable
+            ReordersTable
                 .selectAll()
-                .where { ItemsTable.id eq request.itemId }
+                .where {
+                    (ReordersTable.itemId eq itemId) and
+                        (ReordersTable.status inList listOf(ReorderStatus.WAITING, ReorderStatus.PROCESSING))
+                }
                 .limit(1)
                 .any()
+        }
+    }
 
-            if (!itemExists) {
-                return@transaction null
-            }
-
+    fun createReorder(request: CreateReorderRequest, userId: Int): Int {
+        return transaction {
             ReordersTable.insert {
                 it[ReordersTable.itemId] = request.itemId
                 it[ReordersTable.quantity] = request.quantity
                 it[ReordersTable.status] = ReorderStatus.WAITING
+                it[ReordersTable.createdBy] = userId
             }[ReordersTable.id]
         }
     }
@@ -169,6 +171,12 @@ class ReorderRepository {
             onColumn = ReordersTable.itemId,
             otherColumn = ItemsTable.id
         )
+        .join(
+            UsersTable,
+            joinType = JoinType.INNER,
+            onColumn = ReordersTable.createdBy,
+            otherColumn = UsersTable.id
+        )
         .selectAll()
 
     private fun ResultRow.toReorderResponse(): ReorderResponse {
@@ -179,7 +187,8 @@ class ReorderRepository {
             quantity = this[ReordersTable.quantity],
             status = this[ReordersTable.status],
             createdAt = this[ReordersTable.createdAt].toString(),
-            completedAt = this[ReordersTable.completedAt]?.toString()
+            completedAt = this[ReordersTable.completedAt]?.toString(),
+            createdBy = "${this[UsersTable.name]} ${this[UsersTable.surname]}"
         )
     }
 }

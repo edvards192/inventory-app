@@ -2,21 +2,24 @@ package com.example.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.app.data.remote.toUserMessage
 import com.example.app.data.repository.ItemRepository
 import com.example.app.domain.model.Item
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import com.example.app.domain.model.Warehouse
 import com.example.app.domain.model.StockFilter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 
 data class ItemListState(
     val items: List<Item> = emptyList(),
     val searchText: String = "",
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val sort: String = "updatedDesc",
     val stockFilter: StockFilter = StockFilter.ALL,
@@ -36,6 +39,7 @@ class ItemListViewModel : ViewModel() {
     private val _state = MutableStateFlow(ItemListState())
     val state: StateFlow<ItemListState> = _state
     private val searchQuery = MutableStateFlow("")
+    private var loadJob: Job? = null
 
     init {
         loadWarehouses()
@@ -43,7 +47,6 @@ class ItemListViewModel : ViewModel() {
         viewModelScope.launch {
             searchQuery
                 .debounce(300)
-                .distinctUntilChanged()
                 .collect {
                     loadItems(
                         _state.value.searchText,
@@ -56,6 +59,12 @@ class ItemListViewModel : ViewModel() {
                 }
         }
     }
+    fun reload() {
+        searchQuery.value = ""
+        _state.value = ItemListState()
+        loadWarehouses()
+        loadItems()
+    }
     fun refresh() {
         _state.value =
             _state.value.copy(
@@ -66,13 +75,27 @@ class ItemListViewModel : ViewModel() {
             )
         loadItems(_state.value.searchText, _state.value.sort, _state.value.stockFilter, _state.value.warehouseIds, _state.value.minQuantity, _state.value.maxQuantity)
     }
+    fun pullRefresh() {
+        _state.value =
+            _state.value.copy(
+                page = 1,
+                hasMore = true,
+                isLoadingMore = false,
+                isRefreshing = true
+            )
+        loadItems(_state.value.searchText, _state.value.sort, _state.value.stockFilter, _state.value.warehouseIds, _state.value.minQuantity, _state.value.maxQuantity)
+    }
     fun onSearchChange(value: String) {
+        if (value == _state.value.searchText) return
         _state.value =
             _state.value.copy(
                 searchText = value,
                 page = 1,
                 hasMore = true,
-                items = emptyList()
+                items = emptyList(),
+                isLoading = true,
+                isLoadingMore = false,
+                error = null
             )
         searchQuery.value = value
     }
@@ -83,7 +106,8 @@ class ItemListViewModel : ViewModel() {
                   minQuantity: Int? = _state.value.minQuantity,
                   maxQuantity: Int? = _state.value.maxQuantity,
     ) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             try {
             _state.value = _state.value.copy(isLoading = true, error = null)
                 val currentPage = _state.value.page
@@ -98,15 +122,19 @@ class ItemListViewModel : ViewModel() {
                 _state.value = _state.value.copy(
                         items = newItems,
                         isLoading = false,
+                        isRefreshing = false,
                         isLoadingMore = false,
                         hasMore = items.size == 25
                     )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 e.printStackTrace()
                 _state.value =
                     _state.value.copy(
-                        error = "Cannot connect to server\nPlease check your connection.",
+                        error = e.toUserMessage("Failed to load items."),
                         isLoading = false,
+                        isRefreshing = false,
                         isLoadingMore = false
                     )
             }
@@ -160,7 +188,7 @@ class ItemListViewModel : ViewModel() {
                 e.printStackTrace()
                 _state.value =
                     _state.value.copy(
-                        error = "Cannot connect to server."
+                        error = e.toUserMessage("Failed to load warehouses.")
                     )
             }
         }

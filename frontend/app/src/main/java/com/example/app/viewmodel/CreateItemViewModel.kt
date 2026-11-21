@@ -3,6 +3,7 @@ package com.example.app.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.app.data.remote.toUserMessage
 import com.example.app.data.repository.ItemRepository
 import com.example.app.domain.model.Item
 import com.example.app.domain.util.uriToCompressedFile
@@ -110,7 +111,7 @@ class CreateItemViewModel : ViewModel() {
                 onSuccess()
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(isLoading = false, error = "Cannot connect to server.")
+                _state.value = _state.value.copy(isLoading = false, error = e.toUserMessage("Failed to create item."))
             }
         }
     }
@@ -120,7 +121,7 @@ class CreateItemViewModel : ViewModel() {
                 _state.value = _state.value.copy(availableWarehouses = repository.getWarehouses())
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(error = "Cannot connect to server.")
+                _state.value = _state.value.copy(error = e.toUserMessage("Failed to load warehouses."))
             }
         }
     }

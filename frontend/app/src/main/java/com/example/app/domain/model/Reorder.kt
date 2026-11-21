@@ -7,5 +7,6 @@ data class Reorder(
     val quantity: Int,
     val status: ReorderStatus,
     val createdAt: String,
-    val completedAt: String?
+    val completedAt: String?,
+    val createdBy: String
 )

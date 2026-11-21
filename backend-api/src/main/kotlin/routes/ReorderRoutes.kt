@@ -3,7 +3,10 @@ package com.example.routes
 import com.example.models.requests.CreateReorderRequest
 import com.example.models.responses.ApiResponse
 import com.example.repositories.ReorderRepository
+import com.example.security.userId
 import com.example.services.ReorderProcessor
+import com.example.validation.ReorderValidator
+import com.example.validation.respondConflictError
 import com.example.validation.respondNotFoundError
 import com.example.validation.respondValidationError
 import io.ktor.http.*
@@ -28,13 +31,13 @@ fun Route.reorderRoutes(reorderProcessor: ReorderProcessor) {
     get("/reorders/{id}") {
         val id = call.parameters["id"]?.toIntOrNull()
         if (id == null) {
-            call.respondValidationError("Invalid reorder id")
+            call.respondValidationError("Invalid reorder id.")
             return@get
         }
         val reorder = repository.getReorderById(id)
 
         if (reorder == null) {
-            call.respondNotFoundError("Reorder not found")
+            call.respondNotFoundError("Reorder not found.")
             return@get
         }
         call.respond(
@@ -48,21 +51,21 @@ fun Route.reorderRoutes(reorderProcessor: ReorderProcessor) {
     post("/reorders") {
         val request = call.receive<CreateReorderRequest>()
 
-        if (request.quantity <= 0) {
-            call.respondValidationError("Quantity must be greater than 0")
+        val validation = ReorderValidator.validateCreate(request)
+        if (!validation.isValid) {
+            call.respondValidationError(validation.error!!)
             return@post
         }
         if (!repository.itemExists(request.itemId)) {
-            call.respondNotFoundError("Item not found")
+            call.respondNotFoundError("Item not found.")
+            return@post
+        }
+        if (repository.hasActiveReorderForItem(request.itemId)) {
+            call.respondConflictError("Item already has an active reorder.")
             return@post
         }
 
-        val id = repository.createReorder(request)
-
-        if (id == null) {
-            call.respondValidationError("Could not create reorder")
-            return@post
-        }
+        val id = repository.createReorder(request, call.userId())
 
         reorderProcessor.enqueue(id)
 

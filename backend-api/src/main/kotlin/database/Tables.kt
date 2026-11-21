@@ -15,6 +15,10 @@ object ItemsTable : Table("items") {
     val reorderPoint = integer("reorder_point").default(0)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
+    val createdBy = integer("created_by")
+        .references(UsersTable.id)
+    val updatedBy = integer("updated_by")
+        .references(UsersTable.id)
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -27,6 +31,8 @@ object StorageTable : Table("storage") {
     val warehouseId = integer("warehouse_id")
         .references(WarehousesTable.id)
     val count = integer("count")
+    val updatedBy = integer("updated_by")
+        .references(UsersTable.id)
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -44,6 +50,8 @@ object ItemImagesTable : Table("item_images") {
     val itemId = integer("item_id") references ItemsTable.id
     val url = text("url")
     val sortOrder = integer("sort_order")
+    val createdBy = integer("created_by")
+        .references(UsersTable.id)
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -58,6 +66,8 @@ object ReordersTable : Table("reorders") {
     val createdAt = datetime("created_at")
         .defaultExpression(CurrentDateTime)
     val completedAt = datetime("completed_at").nullable()
+    val createdBy = integer("created_by")
+        .references(UsersTable.id)
 
     override val primaryKey = PrimaryKey(id)
 }

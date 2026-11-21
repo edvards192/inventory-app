@@ -10,5 +10,6 @@ data class ReorderResponse(
     val quantity: Int,
     val status: String,
     val createdAt: String,
-    val completedAt: String? = null
+    val completedAt: String? = null,
+    val createdBy: String
 )

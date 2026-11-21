@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +42,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -90,16 +88,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF04318C),
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.background
-                    ),
-                    endY = 1100f
-                )
-            )
+            .background(Color(0xFF04318C))
             .imePadding()
     ) {
         Column(
@@ -130,15 +119,12 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Inventory",
+                text = "Inventory Management",
                 color = Color.White,
                 fontSize = 32.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Sign in to manage your stock",
-                color = Color.White.copy(alpha = 0.82f),
-                style = MaterialTheme.typography.bodyLarge
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -149,20 +135,16 @@ fun LoginScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Welcome back",
+                        text = "Sign in to your account",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Enter your account details to continue.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 20.sp
                     )
 
                     OutlinedTextField(
@@ -248,20 +230,15 @@ fun LoginScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF04318C)
-                        )
+                        ),
+                        elevation = null
                     ) {
                         if (state.isLoading) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                                Text("Signing in...")
-                            }
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
                         } else {
                             Text(
                                 text = "Sign in",

@@ -13,15 +13,17 @@ fun Application.configureStatusPages() {
     install(StatusPages) {
 
         exception<BadRequestException> { call, _ ->
-            call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(error = "Invalid request body"))
+            call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(error = "Invalid request body."))
         }
 
         exception<Throwable> { call, cause ->
 
+            call.application.environment.log.error("Unhandled error", cause)
+
             call.respond(
                 HttpStatusCode.InternalServerError,
                 ErrorResponse(
-                    error = cause.message ?: "Unknown error"
+                    error = "Internal server error."
                 )
             )
         }

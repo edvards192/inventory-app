@@ -47,9 +47,13 @@ fun AppNavGraph() {
 
     val itemListViewModel: ItemListViewModel = viewModel()
 
+    val reordersViewModel: ReordersViewModel = viewModel()
+
     LaunchedEffect(authState.isAuthenticated) {
 
-        if (!authState.isAuthenticated) {
+        if (authState.isAuthenticated) {
+            itemListViewModel.reload()
+        } else {
 
             val currentRoute =
                 navController.currentDestination?.route
@@ -144,8 +148,6 @@ fun AppNavGraph() {
         }
 
         composable(Routes.ORDERS) {
-            val reordersViewModel: ReordersViewModel = viewModel()
-
             ReordersScreen(
                 viewModel = reordersViewModel,
                 onInventoryClick = {

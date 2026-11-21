@@ -9,6 +9,7 @@ import com.example.models.requests.CreateItemRequest
 import io.ktor.server.request.*
 import com.example.models.responses.ApiResponse
 import com.example.validation.ItemValidator
+import com.example.validation.respondConflictError
 import com.example.validation.respondNotFoundError
 import com.example.validation.respondValidationError
 import io.ktor.http.content.*
@@ -16,6 +17,7 @@ import java.io.File
 import java.util.UUID
 import com.example.models.requests.UpdateStorageRequest
 import com.example.models.requests.ReplaceStorageRequest
+import com.example.security.userId
 
 fun Route.itemRoutes() {
 
@@ -91,7 +93,7 @@ fun Route.itemRoutes() {
     get("/items/ean/{ean}") {
         val ean = call.parameters["ean"]
         if (ean == null) {
-            call.respondValidationError("Invalid EAN")
+            call.respondValidationError("Invalid EAN.")
             return@get
         }
         val item = repository.getItemByEan(ean)
@@ -115,13 +117,13 @@ fun Route.itemRoutes() {
     get("/items/{id}") {
         val id = call.parameters["id"]?.toIntOrNull()
         if (id == null) {
-            call.respondValidationError("Invalid item id")
+            call.respondValidationError("Invalid item id.")
             return@get
         }
         val item = repository.getItemById(id)
 
         if (item == null) {
-            call.respondNotFoundError("Item not found")
+            call.respondNotFoundError("Item not found.")
             return@get
         }
         call.respond(
@@ -139,7 +141,11 @@ fun Route.itemRoutes() {
             call.respondValidationError(validation.error!!)
             return@post
         }
-        val id = repository.createItem(request)
+        if (repository.eanExists(request.ean)) {
+            call.respondConflictError("An item with this EAN already exists.")
+            return@post
+        }
+        val id = repository.createItem(request, call.userId())
 
         call.respond(
             HttpStatusCode.Created,
@@ -153,7 +159,7 @@ fun Route.itemRoutes() {
         val id = call.parameters["id"]?.toIntOrNull()
 
         if (id == null) {
-            call.respondValidationError("Invalid item id")
+            call.respondValidationError("Invalid item id.")
             return@put
         }
 
@@ -165,10 +171,15 @@ fun Route.itemRoutes() {
             return@put
         }
 
-        val updated = repository.updateItem(id, request)
+        if (repository.eanExists(request.ean, excludeItemId = id)) {
+            call.respondConflictError("An item with this EAN already exists.")
+            return@put
+        }
+
+        val updated = repository.updateItem(id, request, call.userId())
 
         if (!updated) {
-            call.respondNotFoundError("Item not found")
+            call.respondNotFoundError("Item not found.")
             return@put
         }
         call.respond(
@@ -184,13 +195,13 @@ fun Route.itemRoutes() {
         val id = call.parameters["id"]?.toIntOrNull()
 
         if (id == null) {
-            call.respondValidationError("Invalid item id")
+            call.respondValidationError("Invalid item id.")
             return@delete
         }
         val deleted = repository.deleteItem(id)
 
         if (!deleted) {
-            call.respondNotFoundError("Item not found")
+            call.respondNotFoundError("Item not found.")
             return@delete
         }
         call.respond(
@@ -206,7 +217,7 @@ fun Route.itemRoutes() {
         val itemId = call.parameters["id"]?.toIntOrNull()
         if (itemId == null) {
             call.respondValidationError(
-                "Invalid item id"
+                "Invalid item id."
             )
             return@post
         }
@@ -216,7 +227,8 @@ fun Route.itemRoutes() {
         repository.addOrUpdateStorage(
             itemId = itemId,
             warehouseId = request.warehouseId,
-            count = request.count
+            count = request.count,
+            userId = call.userId()
         )
         call.respond(
             ApiResponse(
@@ -234,7 +246,7 @@ fun Route.itemRoutes() {
         if (itemId == null) {
 
             call.respondValidationError(
-                "Invalid item id"
+                "Invalid item id."
             )
 
             return@put
@@ -244,7 +256,8 @@ fun Route.itemRoutes() {
 
         repository.replaceStorage(
             itemId = itemId,
-            request = request
+            request = request,
+            userId = call.userId()
         )
         call.respond(
 

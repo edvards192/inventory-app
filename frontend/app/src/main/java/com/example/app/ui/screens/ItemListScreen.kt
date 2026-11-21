@@ -18,6 +18,7 @@ import coil.compose.AsyncImage
 import com.example.app.R
 import com.example.app.viewmodel.ItemListViewModel
 import com.example.app.domain.util.getListImage
+import com.example.app.domain.model.StockFilter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
@@ -156,8 +157,8 @@ fun ItemListScreen(
             )
 
             PullToRefreshBox(
-                isRefreshing = state.isLoading && !state.isLoadingMore,
-                onRefresh = { viewModel.refresh() },
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.pullRefresh() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -265,7 +266,7 @@ fun ItemListScreen(
                     }
 
                     when {
-                        state.items.isEmpty() && state.isLoading -> {
+                        state.items.isEmpty() && state.isLoading && !state.isRefreshing -> {
                             item(
                                 key = "loading",
                                 span = { GridItemSpan(columnCount) }
@@ -294,11 +295,16 @@ fun ItemListScreen(
                                         .height(240.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
+                                    val filtersActive =
+                                        state.stockFilter != StockFilter.ALL ||
+                                        state.warehouseIds.isNotEmpty() ||
+                                        state.minQuantity != null ||
+                                        state.maxQuantity != null
                                     Text(
-                                        if (state.searchText.isBlank()) {
-                                            "No items found\nTap + to create an item."
-                                        } else {
-                                            "No items match your search."
+                                        when {
+                                            state.searchText.isNotBlank() -> "No items match your search."
+                                            filtersActive -> "No items match the selected filters."
+                                            else -> "No items found\nTap + to create an item."
                                         }
                                     )
                                 }
@@ -358,15 +364,28 @@ fun ItemListScreen(
                                             val stock = remember(item.storageLocations) {
                                                 item.storageLocations.sumOf { it.count }
                                             }
-                                            Surface(shape = RoundedCornerShape(50)) {
-                                                Text(
-                                                    text = "Qty $stock",
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 12.dp,
-                                                        vertical = 6.dp
-                                                    ),
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Surface(shape = RoundedCornerShape(50)) {
+                                                    Text(
+                                                        text = "Qty $stock",
+                                                        modifier = Modifier.padding(
+                                                            horizontal = 12.dp,
+                                                            vertical = 6.dp
+                                                        ),
+                                                        style = MaterialTheme.typography.labelLarge
+                                                    )
+                                                }
+                                                if (stock <= item.reorderPoint) {
+                                                    Text(
+                                                        text = "Low",
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        color = Color(0xFFFFC107),
+                                                        maxLines = 1
+                                                    )
+                                                }
                                             }
                                         }
                                     }

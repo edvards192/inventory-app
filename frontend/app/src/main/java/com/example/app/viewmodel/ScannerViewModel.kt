@@ -2,6 +2,7 @@ package com.example.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.app.data.remote.toUserMessage
 import com.example.app.data.repository.ItemRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +40,7 @@ class ScannerViewModel : ViewModel() {
                 e.printStackTrace()
                 _state.value =
                     ScannerState(
-                        error = "Cannot connect to server."
+                        error = e.toUserMessage("Failed to look up the barcode.")
                     )
             }
         }

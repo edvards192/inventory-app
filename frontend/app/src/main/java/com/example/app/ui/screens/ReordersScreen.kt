@@ -213,6 +213,11 @@ private fun QueueRow(reorder: Reorder) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text(
+                    text = "Created by: ${reorder.createdBy}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             StatusBadge(reorder.status)
         }
@@ -243,6 +248,11 @@ private fun HistoryRow(reorder: Reorder) {
                 )
                 Text(
                     text = "Completed: ${reorder.completedAt?.let { formatTimestamp(it) } ?: "-"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Created by: ${reorder.createdBy}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

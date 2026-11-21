@@ -7,6 +7,7 @@ import com.example.models.responses.ItemResponse
 import com.example.database.StorageTable
 import com.example.models.responses.StorageResponse
 import com.example.database.ItemImagesTable
+import com.example.database.ReordersTable
 import com.example.models.responses.ItemImageResponse
 import org.jetbrains.exposed.v1.core.eq
 import com.example.models.requests.CreateItemRequest
@@ -185,7 +186,15 @@ class ItemRepository {
                 }
         }
     }
-    fun createItem(request: CreateItemRequest): Int {
+    fun eanExists(ean: String, excludeItemId: Int? = null): Boolean {
+        return transaction {
+            ItemsTable
+                .selectAll()
+                .where { ItemsTable.ean eq ean }
+                .any { it[ItemsTable.id] != excludeItemId }
+        }
+    }
+    fun createItem(request: CreateItemRequest, userId: Int): Int {
         return transaction {
 
             ItemsTable.insert { row ->
@@ -197,10 +206,12 @@ class ItemRepository {
                 row[ItemsTable.reorderPoint] = request.reorderPoint
                 row[ItemsTable.createdAt] = LocalDateTime.now()
                 row[ItemsTable.updatedAt] = LocalDateTime.now()
+                row[ItemsTable.createdBy] = userId
+                row[ItemsTable.updatedBy] = userId
             }[ItemsTable.id]
         }
-    } 
-    fun updateItem(id: Int, request: CreateItemRequest): Boolean {
+    }
+    fun updateItem(id: Int, request: CreateItemRequest, userId: Int): Boolean {
 
         return transaction {
 
@@ -212,6 +223,7 @@ class ItemRepository {
                 row[ItemsTable.price] = request.price?.let { BigDecimal.valueOf(it) }
                 row[ItemsTable.reorderPoint] = request.reorderPoint
                 row[ItemsTable.updatedAt] = LocalDateTime.now()
+                row[ItemsTable.updatedBy] = userId
             }
 
             updatedRows > 0
@@ -240,6 +252,10 @@ class ItemRepository {
                 StorageTable.itemId eq id
             }
 
+            ReordersTable.deleteWhere {
+                ReordersTable.itemId eq id
+            }
+
             ItemsTable.deleteWhere {
                 ItemsTable.id eq id
             } > 0
@@ -248,7 +264,8 @@ class ItemRepository {
     fun addImage(
         itemId: Int,
         imageUrl: String,
-        sortOrder: Int
+        sortOrder: Int,
+        userId: Int
         ) {
         transaction {
             ItemImagesTable.insert {
@@ -256,13 +273,15 @@ class ItemRepository {
                 it[ItemImagesTable.itemId] = itemId
                 it[url] = imageUrl
                 it[ItemImagesTable.sortOrder] = sortOrder
+                it[ItemImagesTable.createdBy] = userId
             }
             ItemsTable.update({ ItemsTable.id eq itemId }) {
                 it[ItemsTable.updatedAt] = LocalDateTime.now()
+                it[ItemsTable.updatedBy] = userId
             }
         }
     }
-    fun deleteImage(imageId: Int): Boolean {
+    fun deleteImage(imageId: Int, userId: Int): Boolean {
 
     return transaction {
 
@@ -288,6 +307,7 @@ class ItemRepository {
                 { ItemsTable.id eq itemId }
             ) {
                 it[ItemsTable.updatedAt] = LocalDateTime.now()
+                it[ItemsTable.updatedBy] = userId
             }
         }
         deleted
@@ -309,7 +329,7 @@ class ItemRepository {
             }
         }
     } 
-    fun addOrUpdateStorage(itemId: Int,warehouseId: Int,count: Int) {
+    fun addOrUpdateStorage(itemId: Int,warehouseId: Int,count: Int,userId: Int) {
         transaction {
             if (count == 0) {
                 StorageTable.deleteWhere {
@@ -331,6 +351,7 @@ class ItemRepository {
                     it[StorageTable.itemId] = itemId
                     it[StorageTable.warehouseId] = warehouseId
                     it[StorageTable.count] = count
+                    it[StorageTable.updatedBy] = userId
                 }
             } else {
                 StorageTable.update(
@@ -340,11 +361,12 @@ class ItemRepository {
                     }
                 ) {
                     it[StorageTable.count] = count
+                    it[StorageTable.updatedBy] = userId
                 }
             }
         }
     }
-    fun replaceStorage(itemId: Int,request: ReplaceStorageRequest) {
+    fun replaceStorage(itemId: Int,request: ReplaceStorageRequest,userId: Int) {
         transaction {
             StorageTable.deleteWhere {
                 StorageTable.itemId eq itemId
@@ -358,10 +380,12 @@ class ItemRepository {
                         it[StorageTable.itemId] = itemId
                         it[warehouseId] = storage.warehouseId
                         it[count] = storage.count
+                        it[StorageTable.updatedBy] = userId
                     }
                 }
                 ItemsTable.update({ ItemsTable.id eq itemId }) {
                     it[ItemsTable.updatedAt] = LocalDateTime.now()
+                    it[ItemsTable.updatedBy] = userId
                 }
         }
     }

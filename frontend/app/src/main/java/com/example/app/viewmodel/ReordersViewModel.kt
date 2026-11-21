@@ -2,8 +2,10 @@ package com.example.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.app.data.remote.toUserMessage
 import com.example.app.data.repository.ReorderRepository
 import com.example.app.domain.model.Reorder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,12 +28,15 @@ class ReordersViewModel : ViewModel() {
 
     private val refreshIntervalMs = 3_000L
     private var pollingJob: Job? = null
+    private var hasLoaded = false
 
     fun startPolling() {
         if (pollingJob?.isActive == true) return
 
         pollingJob = viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
+            if (!hasLoaded) {
+                _state.value = _state.value.copy(isLoading = true)
+            }
 
             while (isActive) {
                 loadReorders()
@@ -55,17 +60,20 @@ class ReordersViewModel : ViewModel() {
     private suspend fun loadReorders() {
         try {
             val reorders = repository.getReorders()
+            hasLoaded = true
             _state.value = _state.value.copy(
                 queue = reorders.queue,
                 history = reorders.history,
                 isLoading = false,
                 error = null
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.printStackTrace()
             _state.value = _state.value.copy(
                 isLoading = false,
-                error = "Cannot connect to server."
+                error = e.toUserMessage("Failed to load reorders.")
             )
         }
     }

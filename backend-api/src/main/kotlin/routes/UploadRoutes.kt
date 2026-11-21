@@ -3,6 +3,7 @@ package com.example.routes
 import com.example.models.responses.ApiResponse
 import com.example.models.responses.UploadResponse
 import com.example.repositories.ItemRepository
+import com.example.security.userId
 import com.example.services.FileStorageService
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -30,7 +31,7 @@ fun Route.uploadRoutes() {
                 HttpStatusCode.BadRequest,
                 ApiResponse<Unit>(
                     data = null,
-                    error = "Invalid item id"
+                    error = "Invalid item id."
                 )
             )
             return@post
@@ -73,7 +74,7 @@ fun Route.uploadRoutes() {
                 HttpStatusCode.BadRequest,
                 ApiResponse<Unit>(
                     data = null,
-                    error = "No image uploaded"
+                    error = "No image uploaded."
                 )
             )
             return@post
@@ -85,7 +86,8 @@ fun Route.uploadRoutes() {
             repository.addImage(
                 itemId = itemId,
                 imageUrl = uploadedUrl,
-                sortOrder = sortOrder
+                sortOrder = sortOrder,
+                userId = call.userId()
             )
         } catch (cause: Throwable) {
             call.application.log.error("Failed to save image URL to database: itemId=$itemId, uploadedUrl=$uploadedUrl", cause)
@@ -110,20 +112,20 @@ fun Route.uploadRoutes() {
             HttpStatusCode.BadRequest,
             ApiResponse<Unit>(
                 data = null,
-                error = "Invalid image id"
+                error = "Invalid image id."
             )
         )
         return@delete
     }
 
-    val deleted = repository.deleteImage(imageId)
+    val deleted = repository.deleteImage(imageId, call.userId())
 
     if (!deleted) {
         call.respond(
             HttpStatusCode.NotFound,
             ApiResponse<Unit>(
                 data = null,
-                error = "Image not found"
+                error = "Image not found."
             )
         )
         return@delete

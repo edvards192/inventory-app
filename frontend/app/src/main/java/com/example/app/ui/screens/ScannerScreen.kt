@@ -20,6 +20,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.camera.core.ImageAnalysis
 import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.app.viewmodel.ScannerViewModel
@@ -28,6 +30,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +43,7 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
     val previewView = remember { mutableStateOf<PreviewView?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     var scanned by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val viewModel: ScannerViewModel = viewModel()
     val state by viewModel.state.collectAsState()
     var hasCameraPermission by remember {
@@ -147,6 +153,21 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                     stroke
                 )
             }
+            errorMessage?.let { message ->
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(24.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        text = message,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
             }
         } else {
 
@@ -154,7 +175,15 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Camera permission required.")
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Camera permission required.")
+                    Button(
+                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                        modifier = Modifier.padding(top = 16.dp)
+                    ) {
+                        Text("Allow camera access")
+                    }
+                }
             }
         }
         LaunchedEffect(
@@ -174,9 +203,15 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 viewModel.clearNavigation()
             }
             state.error?.let {
-                println("ERROR: $it")
-                scanned = false
+                errorMessage = it
                 viewModel.clearNavigation()
+            }
+        }
+        LaunchedEffect(errorMessage) {
+            if (errorMessage != null) {
+                delay(3000)
+                errorMessage = null
+                scanned = false
             }
         }
         LaunchedEffect(
@@ -196,7 +231,11 @@ fun ScannerScreen(onItemFound: (Int) -> Unit, onCreateItem: (String) -> Unit) {
                 val cameraProvider = cameraProviderFuture.get()
                 val preview = Preview.Builder().build()
                 val imageAnalysis = ImageAnalysis.Builder().build()
-                val scanner = BarcodeScanning.getClient()
+                val scanner = BarcodeScanning.getClient(
+                    BarcodeScannerOptions.Builder()
+                        .setBarcodeFormats(Barcode.FORMAT_EAN_13)
+                        .build()
+                )
                 imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
                     val mediaImage = imageProxy.image
                     if (mediaImage != null) {
